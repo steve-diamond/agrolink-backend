@@ -1,18 +1,36 @@
 const jwt = require("jsonwebtoken");
 
-module.exports = function (req, res, next) {
-  try {
-    const token = req.headers.authorization;
+const User = require("../models/User");
 
-    if (!token) return res.status(401).json({ message: "No token" });
+module.exports = async function (req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || "";
+
+    if (!authHeader) {
+      return res.status(401).json({ message: "No token" });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: "JWT_SECRET is not configured" });
+    }
+
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (decoded.role !== "admin") {
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    if (user.role !== "admin") {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    req.user = decoded;
+    req.user = user;
 
     next();
   } catch (error) {

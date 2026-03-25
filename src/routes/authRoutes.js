@@ -29,6 +29,10 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: "JWT_SECRET is not configured" });
+    }
+
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) return res.status(400).json({ message: "User not found" });
@@ -43,7 +47,10 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({ token, user });
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.json({ token, user: userResponse });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

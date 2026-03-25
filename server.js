@@ -13,11 +13,12 @@ app.use(
 );
 
 connectDB()
-  .catch((err) => {
-    console.warn('MongoDB unavailable, continuing without DB:', err.message);
-  })
-  .finally(() => {
+  .then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
+  })
+  .catch((err) => {
+    console.error('MongoDB connection failed. Server not started:', err.message);
+    process.exit(1);
   });
