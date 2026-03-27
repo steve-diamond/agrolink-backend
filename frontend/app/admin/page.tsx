@@ -140,6 +140,32 @@ export default function AdminPage() {
     }
   };
 
+  const markOrderDelivered = async (orderId: string) => {
+    try {
+      if (!baseUrl) throw new Error("NEXT_PUBLIC_API_URL is not configured");
+      setBusyId(orderId);
+      const token = getToken();
+      const res = await fetch(`${baseUrl}/api/admin/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "delivered" }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update order status");
+
+      setOrders((prev: Order[]) => prev.map((o: Order) => (o._id === orderId ? { ...o, status: "delivered" } : o)));
+      setSuccess("Order marked as delivered.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setError(msg);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const usersView = users.filter((user: User) => {
     const haystack = `${user.name} ${user.email} ${user.role}`.toLowerCase();
     return haystack.includes(userQuery.toLowerCase());
@@ -328,7 +354,8 @@ export default function AdminPage() {
               React.createElement("th", { className: thClass }, "Quantity"),
               React.createElement("th", { className: thClass }, "Total"),
               React.createElement("th", { className: thClass }, "Status"),
-              React.createElement("th", { className: thClass }, "Date")
+              React.createElement("th", { className: thClass }, "Date"),
+              React.createElement("th", { className: thClass }, "Action")
             )
           ),
           React.createElement(
@@ -343,7 +370,22 @@ export default function AdminPage() {
                 React.createElement("td", { className: tdClass }, String(order.quantity ?? 0)),
                 React.createElement("td", { className: tdClass }, fmtCurrency(order.totalPrice ?? 0)),
                 React.createElement("td", { className: tdClass + " capitalize" }, order.status || "-"),
-                React.createElement("td", { className: tdClass }, fmtDate(order.createdAt))
+                React.createElement("td", { className: tdClass }, fmtDate(order.createdAt)),
+                React.createElement(
+                  "td",
+                  { className: tdClass },
+                  React.createElement(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => markOrderDelivered(order._id),
+                      disabled: busyId === order._id || order.status === "delivered",
+                      className:
+                        "rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50",
+                    },
+                    order.status === "delivered" ? "Delivered" : busyId === order._id ? "Updating..." : "Mark Delivered"
+                  )
+                )
               )
             )
           )
