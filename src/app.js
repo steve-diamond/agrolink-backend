@@ -7,7 +7,6 @@ const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const productRoutes = require('./routes/productRoutes');
-const User = require('./models/User');
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
@@ -32,47 +31,6 @@ app.get('/health', (req, res) => {
     message: 'Agrolink API is healthy',
     timestamp: new Date().toISOString(),
   });
-});
-
-app.get('/check-users', async (req, res) => {
-  try {
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message,
-    });
-  }
-});
-
-app.get('/create-admin', async (req, res) => {
-  try {
-    let user = await User.findOne({ email: 'admin@agrolink.com' });
-    
-    if (!user) {
-      user = new User({
-        name: 'Admin',
-        email: 'admin@agrolink.com',
-        password: 'AgroLinkAdmin123!',
-        role: 'admin',
-        approved: true,
-      });
-      await user.save();
-      res.json({ status: 'success', message: 'Admin user created', user: { email: user.email, role: user.role } });
-    } else {
-      user.password = 'AgroLinkAdmin123!';
-      user.role = 'admin';
-      user.approved = true;
-      await user.save();
-      res.json({ status: 'success', message: 'Admin user reset', user: { email: user.email, role: user.role } });
-    }
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message,
-    });
-  }
 });
 
 app.use('/api/auth', authRoutes);
