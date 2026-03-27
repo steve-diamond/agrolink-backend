@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const productRoutes = require('./routes/productRoutes');
+const User = require('./models/User');
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
@@ -31,6 +32,18 @@ app.get('/health', (req, res) => {
     message: 'Agrolink API is healthy',
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get('/check-users', async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message,
+    });
+  }
 });
 
 app.use('/api/auth', authRoutes);
