@@ -8,6 +8,73 @@ const Order = require("../models/Order");
 
 router.use(adminMiddleware);
 
+router.get("/dashboard", async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      totalFarmers,
+      totalBuyers,
+      totalProducts,
+      totalOrders,
+      pendingOrders,
+      paidOrders,
+      deliveredOrders,
+      totalRevenueAgg,
+      recentUsers,
+      recentOrders,
+      recentProducts,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: "farmer" }),
+      User.countDocuments({ role: "buyer" }),
+      Product.countDocuments(),
+      Order.countDocuments(),
+      Order.countDocuments({ status: "pending" }),
+      Order.countDocuments({ status: "paid" }),
+      Order.countDocuments({ status: "delivered" }),
+      Order.aggregate([
+        { $match: { status: { $in: ["paid", "delivered"] } } },
+        { $group: { _id: null, total: { $sum: "$totalPrice" } } },
+      ]),
+      User.find().select("-password").sort({ createdAt: -1 }).limit(5).lean(),
+      Order.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate("buyerId", "name email role")
+        .populate("productId", "name price")
+        .lean(),
+      Product.find().sort({ createdAt: -1 }).limit(5).lean(),
+    ]);
+
+    const totalRevenue = totalRevenueAgg[0]?.total || 0;
+
+    res.json({
+      stats: {
+        users: {
+          total: totalUsers,
+          farmers: totalFarmers,
+          buyers: totalBuyers,
+        },
+        products: totalProducts,
+        orders: {
+          total: totalOrders,
+          pending: pendingOrders,
+          paid: paidOrders,
+          delivered: deliveredOrders,
+        },
+        revenue: totalRevenue,
+      },
+      recent: {
+        users: recentUsers,
+        orders: recentOrders,
+        products: recentProducts,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get("/users", async (req, res) => {
   try {
     const users = await User.find().select("-password");
