@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-let connectionPromise;
+let connectionPromise = null;
 
 const connectDB = async () => {
   const mongoUri = process.env.MONGO_URI;
@@ -18,16 +18,27 @@ const connectDB = async () => {
   }
 
   mongoose.set('strictQuery', true);
+  
   connectionPromise = mongoose
     .connect(mongoUri, {
+      serverApi: {
+        version: '1',
+        strict: true,
+        deprecationErrors: true,
+      },
+      retryWrites: true,
+      w: 'majority',
       serverSelectionTimeoutMS: 5000,
     })
-    .then((connection) => {
-      console.log(`MongoDB connected: ${mongoose.connection.host}`);
+    .then(async (connection) => {
+      // Validate connection with ping
+      await mongoose.connection.db.admin().command({ ping: 1 });
+      console.log(`✓ MongoDB connected: ${mongoose.connection.host}`);
       return connection;
     })
     .catch((error) => {
       connectionPromise = null;
+      console.error('MongoDB connection error:', error.message);
       throw error;
     });
 
