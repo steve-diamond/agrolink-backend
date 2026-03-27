@@ -1,0 +1,117 @@
+.page {
+  min-height: 100vh;
+  padding: 24px;
+  background: radial-gradient(1300px 600px at 10% -10%, #dcefff 0%, #f6f8fc 45%, #f6f8fc 100%);
+  color: #1f2a44;
+}
+
+.state {
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.error {
+  color: #b71c1c;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: #55617a;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.card,
+.tableCard {
+  border: 1px solid #e3e7ef;
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(20, 35, 90, 0.06);
+}
+
+.tableCard {
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.cardLabel {
+  margin: 0;
+  color: #6c7892;
+  font-weight: 600;
+}
+
+.cardValue {
+  margin: 8px 0 0;
+  font-size: 28px;
+}
+
+.cardMeta {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #55617a;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #10203a;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead tr {
+  text-align: left;
+  color: #66748f;
+}
+
+.table th {
+  padding-bottom: 8px;
+}
+
+.table tbody tr {
+  border-top: 1px solid #edf1f7;
+}
+
+.table td {
+  padding: 10px 0;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 16px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .table {
+    font-size: 13px;
+  }
+}
