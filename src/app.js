@@ -46,6 +46,35 @@ app.get('/check-users', async (req, res) => {
   }
 });
 
+app.get('/create-admin', async (req, res) => {
+  try {
+    let user = await User.findOne({ email: 'admin@agrolink.com' });
+    
+    if (!user) {
+      user = new User({
+        name: 'Admin',
+        email: 'admin@agrolink.com',
+        password: 'AgroLinkAdmin123!',
+        role: 'admin',
+        approved: true,
+      });
+      await user.save();
+      res.json({ status: 'success', message: 'Admin user created', user: { email: user.email, role: user.role } });
+    } else {
+      user.password = 'AgroLinkAdmin123!';
+      user.role = 'admin';
+      user.approved = true;
+      await user.save();
+      res.json({ status: 'success', message: 'Admin user reset', user: { email: user.email, role: user.role } });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message,
+    });
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes);
