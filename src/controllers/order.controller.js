@@ -55,6 +55,10 @@ const createOrder = asyncHandler(async (req, res) => {
   const orderProducts = normalizedItems.map((item) => {
     const product = productMap.get(item.productId.toString());
 
+    if (!product.approved) {
+      throw new ApiError(400, `Product is not approved for sale: ${product.name}.`);
+    }
+
     if (item.quantity > product.quantity) {
       throw new ApiError(400, `Insufficient quantity for product: ${product.name}.`);
     }
@@ -164,7 +168,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 
   const isOwningFarmer = order.products.some(
-    (item) => item.productId && item.productId.farmer === req.user.name
+    (item) => item.productId && String(item.productId.farmer) === req.user._id.toString()
   );
 
   if (!isOwningFarmer) {

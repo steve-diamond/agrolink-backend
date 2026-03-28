@@ -46,6 +46,11 @@ const orderSchema = new mongoose.Schema(
 			enum: ["pending", "paid"],
 			default: "pending",
 		},
+		paymentReference: {
+			type: String,
+			default: null,
+			index: true,
+		},
 		createdAt: {
 			type: Date,
 			default: Date.now,
