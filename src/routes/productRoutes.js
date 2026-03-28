@@ -24,18 +24,11 @@ function isValidHttpUrl(value) {
 // Create product
 router.post("/", protect, authorize("farmer"), async (req, res) => {
   try {
-    if (!req.user?.approved) {
-      return res.status(403).json({
-        error: "Your farmer account is pending admin approval. You cannot sell yet.",
-      });
-    }
-
     const name = normalizeString(req.body?.name);
     const category = normalizeString(req.body?.category);
     const location = normalizeString(req.body?.location);
     const description = normalizeString(req.body?.description);
     const imageUrl = normalizeString(req.body?.imageUrl);
-    const farmer = normalizeString(req.body?.farmer);
     const price = parsePositiveNumber(req.body?.price);
     const quantity = parsePositiveNumber(req.body?.quantity);
 
@@ -59,7 +52,7 @@ router.post("/", protect, authorize("farmer"), async (req, res) => {
       location,
       description,
       imageUrl,
-      farmer: farmer || undefined,
+      farmer: req.user._id.toString(),
     });
 
     const saved = await product.save();
