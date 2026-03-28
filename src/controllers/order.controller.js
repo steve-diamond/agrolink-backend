@@ -20,12 +20,12 @@ const serializeOrder = (order) => {
 };
 
 const createOrder = asyncHandler(async (req, res) => {
-  const { items, products, productId, quantity } = req.body;
+  const { items, products: requestProducts, productId, quantity } = req.body;
 
   const inputItems = Array.isArray(items) && items.length > 0
     ? items
-    : Array.isArray(products) && products.length > 0
-    ? products
+    : Array.isArray(requestProducts) && requestProducts.length > 0
+    ? requestProducts
     : [{ productId, quantity }];
 
   if (!Array.isArray(inputItems) || inputItems.length === 0) {
@@ -44,13 +44,13 @@ const createOrder = asyncHandler(async (req, res) => {
   });
 
   const productIds = normalizedItems.map((item) => item.productId);
-  const products = await Product.find({ _id: { $in: productIds } });
+  const dbProducts = await Product.find({ _id: { $in: productIds } });
 
-  if (products.length !== productIds.length) {
+  if (dbProducts.length !== productIds.length) {
     throw new ApiError(400, 'One or more products were not found.');
   }
 
-  const productMap = new Map(products.map((product) => [product._id.toString(), product]));
+  const productMap = new Map(dbProducts.map((product) => [product._id.toString(), product]));
 
   const orderProducts = normalizedItems.map((item) => {
     const product = productMap.get(item.productId.toString());
