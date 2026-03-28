@@ -5,14 +5,34 @@ const Order = require('../models/Order');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/apiError');
 
-const createOrder = asyncHandler(async (req, res) => {
-  const { items, deliveryAddress } = req.body;
+const serializeOrder = (order) => {
+  const rawOrder = typeof order.toObject === 'function' ? order.toObject() : order;
+  const firstProduct = rawOrder.products?.[0] || null;
+  const quantity = (rawOrder.products || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
-  if (!Array.isArray(items) || items.length === 0) {
+  return {
+    ...rawOrder,
+    buyerId: rawOrder.user,
+    productId: firstProduct?.productId || null,
+    quantity,
+    totalPrice: rawOrder.totalAmount,
+  };
+};
+
+const createOrder = asyncHandler(async (req, res) => {
+  const { items, products, productId, quantity } = req.body;
+
+  const inputItems = Array.isArray(items) && items.length > 0
+    ? items
+    : Array.isArray(products) && products.length > 0
+    ? products
+    : [{ productId, quantity }];
+
+  if (!Array.isArray(inputItems) || inputItems.length === 0) {
     throw new ApiError(400, 'Order items are required.');
   }
 
-  const normalizedItems = items.map((item) => ({
+  const normalizedItems = inputItems.map((item) => ({
     productId: item.productId,
     quantity: Number(item.quantity),
   }));
@@ -24,54 +44,45 @@ const createOrder = asyncHandler(async (req, res) => {
   });
 
   const productIds = normalizedItems.map((item) => item.productId);
-  const products = await Product.find({ _id: { $in: productIds }, isActive: true });
+  const products = await Product.find({ _id: { $in: productIds } });
 
   if (products.length !== productIds.length) {
-    throw new ApiError(400, 'One or more products were not found or are inactive.');
-  }
-
-  const firstFarmerId = products[0].farmer.toString();
-  const hasMultipleFarmers = products.some((product) => product.farmer.toString() !== firstFarmerId);
-
-  if (hasMultipleFarmers) {
-    throw new ApiError(400, 'All order items must belong to the same farmer.');
+    throw new ApiError(400, 'One or more products were not found.');
   }
 
   const productMap = new Map(products.map((product) => [product._id.toString(), product]));
 
-  const orderItems = normalizedItems.map((item) => {
+  const orderProducts = normalizedItems.map((item) => {
     const product = productMap.get(item.productId.toString());
 
     if (item.quantity > product.quantity) {
       throw new ApiError(400, `Insufficient quantity for product: ${product.name}.`);
     }
 
-    const subtotal = item.quantity * product.price;
-
     return {
-      product: product._id,
-      nameSnapshot: product.name,
+      productId: product._id,
       quantity: item.quantity,
-      unitPrice: product.price,
-      subtotal,
     };
   });
 
-  const totalAmount = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalAmount = normalizedItems.reduce((sum, item) => {
+    const product = productMap.get(item.productId.toString());
+    return sum + (product.price * item.quantity);
+  }, 0);
 
   const order = await Order.create({
-    buyer: req.user._id,
-    farmer: firstFarmerId,
-    items: orderItems,
+    user: req.user._id,
+    products: orderProducts,
     totalAmount,
-    deliveryAddress: deliveryAddress || '',
+    status: 'pending',
+    paymentStatus: 'pending',
   });
 
   // Reserve stock immediately at order creation.
   await Promise.all(
-    orderItems.map((item) =>
+    orderProducts.map((item) =>
       Product.updateOne(
-        { _id: item.product },
+        { _id: item.productId },
         {
           $inc: {
             quantity: -item.quantity,
@@ -82,32 +93,28 @@ const createOrder = asyncHandler(async (req, res) => {
   );
 
   const populatedOrder = await Order.findById(order._id)
-    .populate('buyer', 'name email role')
-    .populate('farmer', 'name email role')
-    .populate('items.product', 'name category unit');
+    .populate('user', 'name email role')
+    .populate('products.productId', 'name price location farmer');
 
-  res.status(201).json({
-    status: 'success',
-    data: { order: populatedOrder },
-  });
+  res.status(201).json(serializeOrder(populatedOrder));
 });
 
-const getMyOrders = asyncHandler(async (req, res) => {
-  const filter = req.user.role === 'farmer' ? { farmer: req.user._id } : { buyer: req.user._id };
-
-  const orders = await Order.find(filter)
+const getUserOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ user: req.user._id })
     .sort('-createdAt')
-    .populate('buyer', 'name email role')
-    .populate('farmer', 'name email role')
-    .populate('items.product', 'name category unit');
+    .populate('user', 'name email role')
+    .populate('products.productId', 'name price location farmer');
 
-  res.status(200).json({
-    status: 'success',
-    data: {
-      items: orders,
-      total: orders.length,
-    },
-  });
+  res.status(200).json(orders.map(serializeOrder));
+});
+
+const getAllOrders = asyncHandler(async (_req, res) => {
+  const orders = await Order.find()
+    .sort('-createdAt')
+    .populate('user', 'name email role')
+    .populate('products.productId', 'name price location farmer');
+
+  res.status(200).json(orders.map(serializeOrder));
 });
 
 const getOrderById = asyncHandler(async (req, res) => {
@@ -118,26 +125,20 @@ const getOrderById = asyncHandler(async (req, res) => {
   }
 
   const order = await Order.findById(id)
-    .populate('buyer', 'name email role')
-    .populate('farmer', 'name email role')
-    .populate('items.product', 'name category unit');
+    .populate('user', 'name email role')
+    .populate('products.productId', 'name price location farmer');
 
   if (!order) {
     throw new ApiError(404, 'Order not found.');
   }
 
-  const isOwner =
-    order.buyer._id.toString() === req.user._id.toString() ||
-    order.farmer._id.toString() === req.user._id.toString();
+  const isOwner = order.user._id.toString() === req.user._id.toString();
 
   if (!isOwner) {
     throw new ApiError(403, 'You are not allowed to view this order.');
   }
 
-  res.status(200).json({
-    status: 'success',
-    data: { order },
-  });
+  res.status(200).json(serializeOrder(order));
 });
 
 const updateOrderStatus = asyncHandler(async (req, res) => {
@@ -152,28 +153,42 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'status is required.');
   }
 
-  const order = await Order.findById(id);
+  if (!['pending', 'paid', 'delivered'].includes(status)) {
+    throw new ApiError(400, 'Invalid status value.');
+  }
+
+  const order = await Order.findById(id).populate('products.productId', 'farmer');
 
   if (!order) {
     throw new ApiError(404, 'Order not found.');
   }
 
-  if (order.farmer.toString() !== req.user._id.toString()) {
+  const isOwningFarmer = order.products.some(
+    (item) => item.productId && item.productId.farmer === req.user.name
+  );
+
+  if (!isOwningFarmer) {
     throw new ApiError(403, 'Only the owning farmer can update this order status.');
   }
 
   order.status = status;
+  if (status === 'paid') {
+    order.paymentStatus = 'paid';
+  }
   await order.save();
 
-  res.status(200).json({
-    status: 'success',
-    data: { order },
-  });
+  const updatedOrder = await Order.findById(id)
+    .populate('user', 'name email role')
+    .populate('products.productId', 'name price location farmer');
+
+  res.status(200).json(serializeOrder(updatedOrder));
 });
 
 module.exports = {
   createOrder,
-  getMyOrders,
+  getUserOrders,
+  getMyOrders: getUserOrders,
+  getAllOrders,
   getOrderById,
   updateOrderStatus,
 };

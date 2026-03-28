@@ -12,6 +12,15 @@ function parsePositiveNumber(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 // Create product
 router.post("/", protect, authorize("farmer"), async (req, res) => {
   try {
@@ -22,7 +31,10 @@ router.post("/", protect, authorize("farmer"), async (req, res) => {
     }
 
     const name = normalizeString(req.body?.name);
+    const category = normalizeString(req.body?.category);
     const location = normalizeString(req.body?.location);
+    const description = normalizeString(req.body?.description);
+    const imageUrl = normalizeString(req.body?.imageUrl);
     const farmer = normalizeString(req.body?.farmer);
     const price = parsePositiveNumber(req.body?.price);
     const quantity = parsePositiveNumber(req.body?.quantity);
@@ -33,11 +45,20 @@ router.post("/", protect, authorize("farmer"), async (req, res) => {
       });
     }
 
+    if (imageUrl && !isValidHttpUrl(imageUrl)) {
+      return res.status(400).json({
+        error: "imageUrl must be a valid http/https URL.",
+      });
+    }
+
     const product = new Product({
       name,
       price,
       quantity,
+      category,
       location,
+      description,
+      imageUrl,
       farmer: farmer || undefined,
     });
 

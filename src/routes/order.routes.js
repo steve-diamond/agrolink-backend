@@ -2,7 +2,8 @@ const express = require('express');
 
 const {
   createOrder,
-  getMyOrders,
+  getUserOrders,
+  getAllOrders,
   getOrderById,
   updateOrderStatus,
 } = require('../controllers/order.controller');
@@ -13,7 +14,8 @@ const router = express.Router();
 router.use(protect);
 
 router.post('/', authorize('buyer'), createOrder);
-router.get('/', getMyOrders);
+router.get('/', getUserOrders);
+router.get('/all', authorize('admin'), getAllOrders);
 router.get('/:id', getOrderById);
 router.patch('/:id/status', authorize('farmer'), updateOrderStatus);
 

@@ -2,6 +2,20 @@ const User = require("../models/User");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 
+const serializeOrder = (order) => {
+	const rawOrder = typeof order.toObject === "function" ? order.toObject() : order;
+	const firstProduct = rawOrder.products?.[0] || null;
+	const quantity = (rawOrder.products || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+
+	return {
+		...rawOrder,
+		buyerId: rawOrder.user,
+		productId: firstProduct?.productId || null,
+		quantity,
+		totalPrice: rawOrder.totalAmount,
+	};
+};
+
 const getAllUsers = async (req, res) => {
 	try {
 		const users = await User.find().select("-password").sort({ createdAt: -1 });
@@ -57,10 +71,10 @@ const getAllOrders = async (req, res) => {
 	try {
 		const orders = await Order.find()
 			.sort({ createdAt: -1 })
-			.populate("productId")
-			.populate("buyerId", "-password");
+			.populate("user", "-password")
+			.populate("products.productId");
 
-		return res.status(200).json({ orders });
+		return res.status(200).json({ orders: orders.map(serializeOrder) });
 	} catch (error) {
 		return res.status(500).json({ message: "Failed to fetch orders", error: error.message });
 	}

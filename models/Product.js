@@ -14,9 +14,21 @@ const productSchema = new mongoose.Schema(
 			type: Number,
 			required: true,
 		},
+		category: {
+			type: String,
+			default: "",
+		},
 		location: {
 			type: String,
 			required: true,
+		},
+		description: {
+			type: String,
+			default: "",
+		},
+		imageUrl: {
+			type: String,
+			default: "",
 		},
 		farmer: {
 			type: String,

@@ -14,6 +14,20 @@ const {
 	getAllOrders,
 } = require("../controllers/adminController");
 
+const serializeOrder = (order) => {
+	const rawOrder = typeof order.toObject === "function" ? order.toObject() : order;
+	const firstProduct = rawOrder.products?.[0] || null;
+	const quantity = (rawOrder.products || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+
+	return {
+		...rawOrder,
+		buyerId: rawOrder.user,
+		productId: firstProduct?.productId || null,
+		quantity,
+		totalPrice: rawOrder.totalAmount,
+	};
+};
+
 router.use(adminMiddleware);
 
 router.get("/dashboard", async (req, res) => {
@@ -42,14 +56,14 @@ router.get("/dashboard", async (req, res) => {
 			Order.countDocuments({ status: "delivered" }),
 			Order.aggregate([
 				{ $match: { status: { $in: ["paid", "delivered"] } } },
-				{ $group: { _id: null, total: { $sum: "$totalPrice" } } },
+				{ $group: { _id: null, total: { $sum: "$totalAmount" } } },
 			]),
 			User.find().select("-password").sort({ createdAt: -1 }).limit(5).lean(),
 			Order.find()
 				.sort({ createdAt: -1 })
 				.limit(5)
-				.populate("buyerId", "name email role")
-				.populate("productId", "name price")
+				.populate("user", "name email role")
+				.populate("products.productId", "name price")
 				.lean(),
 			Product.find().sort({ createdAt: -1 }).limit(5).lean(),
 		]);
@@ -74,7 +88,7 @@ router.get("/dashboard", async (req, res) => {
 			},
 			recent: {
 				users: recentUsers,
-				orders: recentOrders,
+				orders: recentOrders.map(serializeOrder),
 				products: recentProducts,
 			},
 		});
@@ -124,6 +138,9 @@ router.patch("/orders/:id/status", async (req, res) => {
 		}
 
 		order.status = status;
+		if (status === "paid") {
+			order.paymentStatus = "paid";
+		}
 		await order.save();
 
 		res.json({ message: "Order status updated", order });

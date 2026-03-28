@@ -78,6 +78,7 @@ router.get("/verify/:reference", async (req, res) => {
       if (orderId) {
         await Order.findByIdAndUpdate(orderId, {
           status: "paid",
+          paymentStatus: "paid",
         });
       }
     }
