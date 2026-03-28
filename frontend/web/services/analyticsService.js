@@ -1,0 +1,4 @@
+// Analytics Service
+import api from './api';
+
+export const getAnalytics = () => api.get('/admin/analytics');

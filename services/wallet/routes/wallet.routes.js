@@ -1,0 +1,18 @@
+const express = require('express');
+const walletController = require('../controllers/wallet.controller');
+const router = express.Router();
+
+// Wallet routes
+router.get('/deposit-history', walletController.getDepositHistory);
+router.get('/transactions', walletController.getWalletTransactions);
+router.get('/filter', walletController.filterTransactions);
+router.get('/export', walletController.exportTransactions);
+router.get('/currency', walletController.getWalletCurrency);
+router.get('/balance', walletController.getWalletBalance);
+router.post('/transfer', walletController.transferToUser);
+router.post('/withdraw', walletController.requestWithdrawal);
+router.post('/credit', walletController.creditWallet);
+router.post('/lock/:id', walletController.lockWallet);
+router.post('/unlock/:id', walletController.unlockWallet);
+
+module.exports = router;

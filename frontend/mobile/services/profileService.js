@@ -1,0 +1,5 @@
+// Profile Service
+import api from './api';
+
+export const getProfile = () => api.get('/admin/profile');
+export const updateProfile = (data) => api.put('/admin/profile', data);
