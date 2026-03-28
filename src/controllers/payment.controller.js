@@ -130,38 +130,42 @@ const verifyPayment = asyncHandler(async (req, res) => {
   const isSuccessful = transaction.status === "success";
 
   if (isSuccessful) {
-    const orderIdFromMeta = transaction?.metadata?.orderId;
+    const type = transaction?.metadata?.type;
+    const userId = transaction?.metadata?.userId;
+    const paidAmount = toTwoDp((transaction.amount || 0) / 100);
     const transactionReference = transaction.reference || reference;
 
-    let order = null;
-    if (orderIdFromMeta) {
-      order = await Order.findById(orderIdFromMeta);
+    if (type === 'wallet-fund' && userId) {
+      // Credit wallet
+      const { creditWallet } = require('./wallet.controller');
+      await creditWallet(userId, paidAmount, transactionReference, 'Wallet funding');
+      transaction.walletFunded = true;
+    } else {
+      // Default: order payment
+      const orderIdFromMeta = transaction?.metadata?.orderId;
+      let order = null;
+      if (orderIdFromMeta) {
+        order = await Order.findById(orderIdFromMeta);
+      }
+      if (!order && transactionReference) {
+        order = await Order.findOne({ paymentReference: transactionReference });
+      }
+      if (!order) {
+        throw new ApiError(404, "Order not found for this payment reference");
+      }
+      const orderAmount = toTwoDp(order.totalAmount);
+      if (paidAmount !== orderAmount) {
+        throw new ApiError(400, "Paid amount does not match order total", {
+          paidAmount,
+          expectedAmount: orderAmount,
+        });
+      }
+      order.paymentStatus = "paid";
+      order.status = "paid";
+      order.paymentReference = transactionReference;
+      await order.save();
+      transaction.orderId = order._id;
     }
-
-    if (!order && transactionReference) {
-      order = await Order.findOne({ paymentReference: transactionReference });
-    }
-
-    if (!order) {
-      throw new ApiError(404, "Order not found for this payment reference");
-    }
-
-    const paidAmount = toTwoDp((transaction.amount || 0) / 100);
-    const orderAmount = toTwoDp(order.totalAmount);
-
-    if (paidAmount !== orderAmount) {
-      throw new ApiError(400, "Paid amount does not match order total", {
-        paidAmount,
-        expectedAmount: orderAmount,
-      });
-    }
-
-    order.paymentStatus = "paid";
-    order.status = "paid";
-    order.paymentReference = transactionReference;
-    await order.save();
-
-    transaction.orderId = order._id;
   }
 
   return res.status(200).json({

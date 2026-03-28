@@ -16,6 +16,7 @@ const serializeOrder = (order) => {
     productId: firstProduct?.productId || null,
     quantity,
     totalPrice: rawOrder.totalAmount,
+    commission: rawOrder.commission,
   };
 };
 
@@ -69,15 +70,20 @@ const createOrder = asyncHandler(async (req, res) => {
     };
   });
 
+
   const totalAmount = normalizedItems.reduce((sum, item) => {
     const product = productMap.get(item.productId.toString());
     return sum + (product.price * item.quantity);
   }, 0);
 
+  // Fixed 10% commission
+  const commission = Number((totalAmount * 0.10).toFixed(2));
+
   const order = await Order.create({
     user: req.user._id,
     products: orderProducts,
     totalAmount,
+    commission,
     status: 'pending',
     paymentStatus: 'pending',
   });
@@ -178,6 +184,30 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   order.status = status;
   if (status === 'paid') {
     order.paymentStatus = 'paid';
+  }
+  // Credit farmer wallet when delivered
+  if (status === 'delivered' && order.status !== 'delivered') {
+    // For each product, credit the farmer
+    const WalletController = require('./wallet.controller');
+    const User = require('../models/User');
+    for (const item of order.products) {
+      const product = item.productId;
+      if (!product || !product.farmer) continue;
+      // Find farmer user
+      const farmer = await User.findById(product.farmer);
+      if (!farmer) continue;
+      // Calculate commission and farmer earning
+      const productTotal = product.price * item.quantity;
+      const commission = Number((productTotal * 0.1).toFixed(2)); // 10% commission
+      const farmerAmount = productTotal - commission;
+      // Credit farmer wallet
+      await WalletController.creditWallet(farmer._id, farmerAmount, order._id, `Order delivered: ${order._id}`);
+      // Send SMS if phone number exists
+      if (farmer.phone) {
+        const { sendSMS } = require('../../services/smsService');
+        sendSMS(farmer.phone, `Your order has been delivered. ₦${farmerAmount} credited to your wallet.`);
+      }
+    }
   }
   await order.save();
 

@@ -1,8 +1,8 @@
 .page {
   min-height: 100vh;
   padding: 24px;
-  background: radial-gradient(1300px 600px at 10% -10%, #dcefff 0%, #f6f8fc 45%, #f6f8fc 100%);
-  color: #1f2a44;
+  background: radial-gradient(1300px 600px at 10% -10%, #f5ecd7 0%, #e6d7b0 45%, #f5ecd7 100%);
+  color: #2d4c2a;
 }
 
 .state {
@@ -18,16 +18,18 @@
 
 .header {
   margin-bottom: 20px;
+  color: #2d4c2a;
 }
 
 .title {
   margin: 0;
   font-size: 32px;
+  color: #2d4c2a;
 }
 
 .subtitle {
   margin-top: 8px;
-  color: #55617a;
+  color: #7a5c2e;
 }
 
 .cards {

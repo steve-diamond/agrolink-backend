@@ -36,6 +36,12 @@ const orderSchema = new mongoose.Schema(
 			required: true,
 			min: 0,
 		},
+		commission: {
+			type: Number,
+			required: true,
+			min: 0,
+			default: 0,
+		},
 		status: {
 			type: String,
 			enum: ["pending", "paid", "delivered"],

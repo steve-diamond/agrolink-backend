@@ -9,12 +9,15 @@ const {
 } = require('../controllers/product.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
+
+const ensureActiveSubscription = require('../middleware/subscriptionMiddleware');
+
 const router = express.Router();
 
 router.get('/', listProducts);
 router.get('/:id', getProductById);
 
-router.post('/', protect, authorize('farmer'), createProduct);
+router.post('/', protect, authorize('farmer'), ensureActiveSubscription, createProduct);
 router.put('/:id', protect, authorize('farmer'), updateProduct);
 router.delete('/:id', protect, authorize('farmer'), deleteProduct);
 
