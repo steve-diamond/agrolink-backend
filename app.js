@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimiter = require('../middleware/rateLimiter');
+const rateLimiter = require('./middleware/rateLimiter');
 
 const apiRoutes = require('../routes');
 const adminRoutes = require('../routes/adminRoutes');
