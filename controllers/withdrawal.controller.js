@@ -1,7 +1,14 @@
-const Withdrawal = require('../models/Withdrawal');
+
+const asyncHandler = require('../../utils/asyncHandler');
+const Withdrawal = require('../../models/Withdrawal');
 const Wallet = require('../../models/Wallet');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
+const ApiError = require('../../utils/apiError');
+
+// Admin: List all withdrawals
+exports.listWithdrawals = asyncHandler(async (req, res) => {
+  const withdrawals = await Withdrawal.find().sort('-createdAt');
+  res.status(200).json({ status: 'success', data: withdrawals });
+});
 
 // 1. User requests withdrawal
 exports.requestWithdrawal = asyncHandler(async (req, res) => {

@@ -1,14 +1,13 @@
 const express = require('express');
-const { protect, authorize } = require('../middleware/auth.middleware');
+const { protect, authorize } = require('../../middleware/auth.middleware');
 const {
   requestWithdrawal,
   listWithdrawals,
-  updateWithdrawalStatus,
   adminApproveWithdrawal,
   adminMarkPaid,
   adminRefund,
   adminAddNote,
-} = require('../controllers/withdrawal.controller');
+} = require('../../controllers/withdrawal.controller');
 const { body, param, validate } = require('../../middleware/validation');
 
 const router = express.Router();
