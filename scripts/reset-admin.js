@@ -1,8 +1,9 @@
 /* eslint-disable no-console */
+
 require("dotenv").config();
 
-const connectDB = require("../src/config/db");
-const User = require("../src/models/User");
+const connectDB = require("../config/db");
+const User = require("../models/User");
 const mongoose = require("mongoose");
 
 async function run() {

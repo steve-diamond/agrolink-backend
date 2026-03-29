@@ -1,1 +1,1 @@
-module.exports = require('../../models/Withdrawal');
+module.exports = require('../services/wallet/models/Withdrawal');
