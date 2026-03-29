@@ -3,12 +3,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimiter = require('./middleware/rateLimiter');
 
-const apiRoutes = require('../routes');
-const adminRoutes = require('../routes/adminRoutes');
-const authRoutes = require('../routes/authRoutes');
-const orderRoutes = require('../routes/order.routes');
-const paymentRoutes = require('../routes/paymentRoutes');
-const productRoutes = require('../routes/productRoutes');
+const apiRoutes = require('./routes');
+const adminRoutes = require('./routes/adminRoutes');
+const authRoutes = require('./routes/authRoutes');
+const orderRoutes = require('./routes/order.routes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const productRoutes = require('./routes/productRoutes');
 const { notFoundHandler, errorHandler } = require('../middleware/error.middleware');
 
 const app = express();
