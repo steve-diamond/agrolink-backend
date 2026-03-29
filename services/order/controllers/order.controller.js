@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const asyncHandler = require('../../../src/utils/asyncHandler');
-const ApiError = require('../../../src/utils/apiError');
+const ApiError = require('../../utils/apiError');
 
 const serializeOrder = (order) => {
   const rawOrder = typeof order.toObject === 'function' ? order.toObject() : order;

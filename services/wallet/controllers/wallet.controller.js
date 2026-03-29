@@ -1,7 +1,7 @@
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
 const asyncHandler = require('../../../src/utils/asyncHandler');
-const ApiError = require('../../../src/utils/apiError');
+const ApiError = require('../../utils/apiError');
 
 // Deposit history (all credits)
 exports.getDepositHistory = asyncHandler(async (req, res) => {

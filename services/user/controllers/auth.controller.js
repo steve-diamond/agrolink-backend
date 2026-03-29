@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const User = require('../models/User');
 const asyncHandler = require('../../../src/utils/asyncHandler');
-const ApiError = require('../../../src/utils/apiError');
+const ApiError = require('../../utils/apiError');
 
 const getToken = (userId) => {
   if (!process.env.JWT_SECRET) {
