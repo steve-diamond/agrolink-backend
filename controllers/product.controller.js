@@ -5,7 +5,8 @@ const {
   createProductService,
   updateProductService,
   deleteProductService,
-} = require('../../services/productService');
+const path = require('path');
+} = require(path.join(__dirname, '../services/productService'));
 
 const listProducts = asyncHandler(async (req, res) => {
   const data = await listProductsService(req.query);
