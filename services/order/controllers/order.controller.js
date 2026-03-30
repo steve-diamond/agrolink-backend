@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 
 const Product = require('../models/Product');
 const Order = require('../models/Order');
-const asyncHandler = require('../../../src/utils/asyncHandler');
-const ApiError = require('../../utils/apiError');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', '..', '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', '..', '..', 'utils', 'apiError'));
 
 const serializeOrder = (order) => {
   const rawOrder = typeof order.toObject === 'function' ? order.toObject() : order;
@@ -187,8 +188,8 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   // Credit farmer wallet when delivered
   if (status === 'delivered' && order.status !== 'delivered') {
     // For each product, credit the farmer
-    const WalletController = require('../../user/controllers/wallet.controller');
-    const User = require('../../../services/user/models/User');
+    const WalletController = require(path.join(__dirname, '..', '..', 'user', 'controllers', 'wallet.controller'));
+    const User = require(path.join(__dirname, '..', '..', 'user', 'models', 'User'));
     for (const item of order.products) {
       const product = item.productId;
       if (!product || !product.farmer) continue;
@@ -203,7 +204,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       await WalletController.creditWallet(farmer._id, farmerAmount, order._id, `Order delivered: ${order._id}`);
       // Send SMS if phone number exists
       if (farmer.phone) {
-        const { sendSMS } = require('../../../../services/smsService');
+        const { sendSMS } = require(path.join(__dirname, '..', '..', '..', 'smsService'));
         sendSMS(farmer.phone, `Your order has been delivered. ₦${farmerAmount} credited to your wallet.`);
       }
     }
