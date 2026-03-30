@@ -4,7 +4,8 @@ const {
   initializePayment,
   verifyPayment,
 } = require('../controllers/payment.controller');
-const { body, param, validate } = require('../../middleware/validation');
+const path = require('path');
+const { body, param, validate } = require(path.join(__dirname, '../middleware/validation'));
 
 router.post('/initialize',
   body('email').isEmail().normalizeEmail(),

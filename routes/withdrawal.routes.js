@@ -1,5 +1,6 @@
 const express = require('express');
-const { protect, authorize } = require('../../middleware/auth.middleware');
+const path = require('path');
+const { protect, authorize } = require(path.join(__dirname, '..', 'middleware', 'auth.middleware'));
 const {
   requestWithdrawal,
   listWithdrawals,
@@ -7,8 +8,8 @@ const {
   adminMarkPaid,
   adminRefund,
   adminAddNote,
-} = require('../../controllers/withdrawal.controller');
-const { body, param, validate } = require('../../middleware/validation');
+} = require(path.join(__dirname, '..', 'controllers', 'withdrawal.controller'));
+const { body, param, validate } = require(path.join(__dirname, '..', 'middleware', 'validation'));
 
 const router = express.Router();
 
