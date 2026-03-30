@@ -9,7 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/order.routes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const productRoutes = require('./routes/productRoutes');
-const { notFoundHandler, errorHandler } = require('../middleware/error.middleware');
+const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
 
