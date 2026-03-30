@@ -1,6 +1,6 @@
 const Subscription = require('../../models/Subscription');
 const SubscriptionHistory = require('../../models/SubscriptionHistory');
-const User = require('../../models/User');
+const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 
 exports.listAllSubscriptions = asyncHandler(async (_req, res) => {

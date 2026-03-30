@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-const User = require('../../models/User');
+const path = require('path');
+const User = require(path.join(__dirname, '../models/User'));
 const asyncHandler = require('../../utils/asyncHandler');
 const ApiError = require('../../utils/apiError');
 
