@@ -137,7 +137,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
     if (type === 'wallet-fund' && userId) {
       // Credit wallet
-      const { creditWallet } = require('./wallet.controller');
+      const { creditWallet } = require(path.join(__dirname, 'wallet.controller'));
       await creditWallet(userId, paidAmount, transactionReference, 'Wallet funding');
       transaction.walletFunded = true;
     } else {

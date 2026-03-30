@@ -1,7 +1,8 @@
 const path = require('path');
 const Subscription = require(path.join(__dirname, '../models/Subscription'));
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 const axios = require('axios');
 
 const SUBSCRIPTION_FEE = 2000; // NGN, example monthly fee

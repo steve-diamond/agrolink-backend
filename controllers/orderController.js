@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
 const serializeOrder = (order) => {
 	const rawOrder = typeof order.toObject === 'function' ? order.toObject() : order;
@@ -153,7 +154,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 	if (status === 'delivered' && order.status !== 'delivered') {
 		// For each product, credit the farmer
 		// NOTE: You must update this import path to the new walletController location
-		// const WalletController = require('./walletController');
+		// const WalletController = require(path.join(__dirname, 'walletController'));
 		// const User = require('../models/User');
 		// ...existing code...
 	}

@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 
 const Product = require('../models/Product');
 const Order = require('../models/Order');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
 const serializeOrder = (order) => {
   const rawOrder = typeof order.toObject === 'function' ? order.toObject() : order;
@@ -188,7 +189,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   // Credit farmer wallet when delivered
   if (status === 'delivered' && order.status !== 'delivered') {
     // For each product, credit the farmer
-    const WalletController = require('./wallet.controller');
+    const WalletController = require(path.join(__dirname, 'wallet.controller'));
     const User = require('../models/User');
     for (const item of order.products) {
       const product = item.productId;

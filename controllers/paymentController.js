@@ -1,7 +1,8 @@
 const axios = require('axios');
 const Order = require('../models/Order');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
 const toTwoDp = (value) => Number(Number(value || 0).toFixed(2));
 
@@ -135,7 +136,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
 
 		if (type === 'wallet-fund' && userId) {
 			// Credit wallet
-			const { creditWallet } = require('./walletController');
+			const { creditWallet } = require(path.join(__dirname, 'walletController'));
 			await creditWallet(userId, paidAmount, transactionReference, 'Wallet funding');
 			transaction.walletFunded = true;
 		} else {

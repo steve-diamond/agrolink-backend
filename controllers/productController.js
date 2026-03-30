@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
 const listProducts = asyncHandler(async (req, res) => {
 	const {

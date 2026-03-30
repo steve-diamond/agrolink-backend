@@ -2,7 +2,8 @@ const path = require('path');
 const Subscription = require(path.join(__dirname, '../models/Subscription'));
 const SubscriptionHistory = require(path.join(__dirname, '../models/SubscriptionHistory'));
 const User = require('../models/User');
-const asyncHandler = require('../utils/asyncHandler');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
 
 exports.listAllSubscriptions = asyncHandler(async (_req, res) => {
   const subs = await Subscription.find().populate('user', 'name email role');

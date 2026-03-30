@@ -1,8 +1,8 @@
 const path = require('path');
 const Wallet = require(path.join(__dirname, '../models/Wallet'));
 const WalletTransaction = require(path.join(__dirname, '../models/WalletTransaction'));
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
 // Deposit history (all credits)
 exports.getDepositHistory = asyncHandler(async (req, res) => {
@@ -75,9 +75,6 @@ exports.transferToUser = asyncHandler(async (req, res) => {
   res.status(200).json({ status: 'success', message: 'Transfer complete' });
 });
 // ...existing code...
-const Wallet = require(path.join(__dirname, '../models/Wallet'));
-const WalletTransaction = require(path.join(__dirname, '../models/WalletTransaction'));
-const asyncHandler = require('../utils/asyncHandler');
 
 
 // 1. Get wallet balance for logged-in user

@@ -1,5 +1,6 @@
 const path = require('path');
-const asyncHandler = require('../utils/asyncHandler');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
 const {
   listProductsService,
   getProductByIdService,

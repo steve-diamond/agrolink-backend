@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
-const ApiError = require('./utils/apiError');
+const path = require('path');
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
 async function listProductsService({ page = 1, limit = 20, category, search, minPrice, maxPrice, sort = '-createdAt' }) {
   const pageNumber = Math.max(Number(page), 1);
