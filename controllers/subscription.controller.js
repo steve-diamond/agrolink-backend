@@ -1,6 +1,5 @@
 const path = require('path');
 const Subscription = require(path.join(__dirname, '../models/Subscription'));
-const path = require('path');
 const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
 const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 const axios = require('axios');
