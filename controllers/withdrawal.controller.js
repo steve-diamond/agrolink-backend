@@ -1,7 +1,6 @@
 
 const path = require('path');
 const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
-const path = require('path');
 const Withdrawal = require(path.join(__dirname, '../models/Withdrawal'));
 const Wallet = require(path.join(__dirname, '../models/Wallet'));
 const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
