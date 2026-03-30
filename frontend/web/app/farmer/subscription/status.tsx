@@ -1,11 +1,10 @@
-"use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function FarmerSubscriptionStatus() {
-  const [status, setStatus] = useState<string | null>(null);
-  const [endDate, setEndDate] = useState<string | null>(null);
+  const [status, setStatus] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -23,8 +22,16 @@ export default function FarmerSubscriptionStatus() {
       .finally(() => setLoading(false));
   }, []);
 
+  const containerStyle: React.CSSProperties = {
+    maxWidth: 400,
+    margin: "2rem auto",
+    padding: 24,
+    border: "1px solid #eee",
+    borderRadius: 8,
+  };
+
   return (
-    <div style={{ maxWidth: 400, margin: "2rem auto", padding: 24, border: "1px solid #eee", borderRadius: 8 }}>
+    <div style={containerStyle}>
       <h2>Subscription Status</h2>
       {loading && <p>Loading...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
