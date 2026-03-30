@@ -1,4 +1,5 @@
-const Delivery = require('../../models/Delivery');
+const path = require('path');
+const Delivery = require(path.join(__dirname, '../models/Delivery'));
 const asyncHandler = require('../utils/asyncHandler');
 
 exports.createDelivery = asyncHandler(async (req, res) => {

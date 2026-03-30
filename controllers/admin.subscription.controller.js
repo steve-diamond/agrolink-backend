@@ -1,5 +1,6 @@
-const Subscription = require('../../models/Subscription');
-const SubscriptionHistory = require('../../models/SubscriptionHistory');
+const path = require('path');
+const Subscription = require(path.join(__dirname, '../models/Subscription'));
+const SubscriptionHistory = require(path.join(__dirname, '../models/SubscriptionHistory'));
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 

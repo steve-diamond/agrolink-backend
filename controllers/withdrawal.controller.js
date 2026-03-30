@@ -1,7 +1,8 @@
 
 const asyncHandler = require('../../utils/asyncHandler');
-const Withdrawal = require('../../models/Withdrawal');
-const Wallet = require('../../models/Wallet');
+const path = require('path');
+const Withdrawal = require(path.join(__dirname, '../models/Withdrawal'));
+const Wallet = require(path.join(__dirname, '../models/Wallet'));
 const ApiError = require('../../utils/apiError');
 
 // Admin: List all withdrawals

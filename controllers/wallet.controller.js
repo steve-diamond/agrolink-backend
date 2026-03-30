@@ -1,5 +1,6 @@
-const Wallet = require('../../models/Wallet');
-const WalletTransaction = require('../../models/WalletTransaction');
+const path = require('path');
+const Wallet = require(path.join(__dirname, '../models/Wallet'));
+const WalletTransaction = require(path.join(__dirname, '../models/WalletTransaction'));
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/apiError');
 
@@ -73,8 +74,9 @@ exports.transferToUser = asyncHandler(async (req, res) => {
   await WalletTransaction.create({ user: toUserId, type: 'credit', amount, description: `Transfer from user ${req.user._id}` });
   res.status(200).json({ status: 'success', message: 'Transfer complete' });
 });
-const Wallet = require('../../models/Wallet');
-const WalletTransaction = require('../../models/WalletTransaction');
+// ...existing code...
+const Wallet = require(path.join(__dirname, '../models/Wallet'));
+const WalletTransaction = require(path.join(__dirname, '../models/WalletTransaction'));
 const asyncHandler = require('../utils/asyncHandler');
 
 

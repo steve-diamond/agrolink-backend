@@ -204,7 +204,8 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       await WalletController.creditWallet(farmer._id, farmerAmount, order._id, `Order delivered: ${order._id}`);
       // Send SMS if phone number exists
       if (farmer.phone) {
-        const { sendSMS } = require('../../services/smsService');
+        const path = require('path');
+        const { sendSMS } = require(path.join(__dirname, '../services/smsService'));
         sendSMS(farmer.phone, `Your order has been delivered. ₦${farmerAmount} credited to your wallet.`);
       }
     }

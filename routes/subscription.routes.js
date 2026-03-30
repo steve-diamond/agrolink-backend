@@ -5,7 +5,8 @@ const {
   verifySubscription,
   getMySubscription,
 } = require('../controllers/subscription.controller');
-const { body, param, validate } = require('../../middleware/validation');
+const path = require('path');
+const { body, param, validate } = require(path.join(__dirname, '../middleware/validation'));
 
 const router = express.Router();
 

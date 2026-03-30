@@ -1,4 +1,5 @@
-const Subscription = require('../../models/Subscription');
+const path = require('path');
+const Subscription = require(path.join(__dirname, '../models/Subscription'));
 const ApiError = require('../utils/apiError');
 
 // Middleware to check if user has an active subscription
