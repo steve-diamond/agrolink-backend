@@ -1,7 +1,8 @@
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
-const asyncHandler = require('./utils/asyncHandler');
-const ApiError = require('./utils/apiError');
+const path = require('path');
+const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
+const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
 exports.getDepositHistory = asyncHandler(async (req, res) => {
 	const txs = await WalletTransaction.find({ user: req.user._id, type: 'credit' }).sort('-createdAt');
