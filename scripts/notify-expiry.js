@@ -4,7 +4,7 @@ const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const nodemailer = require('nodemailer');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost/agrolink';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost/agrolink';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'no-reply@agrolink.com';
 const SMTP_URL = process.env.SMTP_URL || '';
 

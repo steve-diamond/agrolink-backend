@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 const REQUIRED_ENV_VARS = [
   'NODE_ENV',
   'PORT',
-  'MONGO_URI',
+  'MONGODB_URI',
   'JWT_SECRET',
   'JWT_EXPIRES_IN',
   'CORS_ORIGIN',
@@ -39,7 +39,7 @@ if (missing.length) {
 }
 
 // MongoDB connectivity check
-const mongoUri = process.env.MONGO_URI;
+const mongoUri = process.env.MONGODB_URI;
 console.log('Checking MongoDB connectivity...');
 mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 })
   .then(() => {

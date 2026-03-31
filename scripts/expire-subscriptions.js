@@ -4,7 +4,7 @@ const Subscription = require('../models/Subscription');
 const SubscriptionHistory = require('../models/SubscriptionHistory');
 const User = require('../models/User');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost/agrolink';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost/agrolink';
 
 async function expireSubscriptions() {
   await mongoose.connect(MONGO_URI);

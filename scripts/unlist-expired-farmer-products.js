@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 const Subscription = require('../models/Subscription');
 const Product = require('../models/Product');
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost/agrolink';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost/agrolink';
 
 async function unlistExpiredFarmerProducts() {
   await mongoose.connect(MONGO_URI);
