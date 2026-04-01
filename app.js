@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimiter = require('./middleware/rateLimiter');
+const morgan = require('morgan');
 
 const apiRoutes = require('./routes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -24,6 +25,7 @@ app.use(helmet());
 app.use(rateLimiter);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(morgan('combined'));
 
 app.get('/', (req, res) => {
   res.send('AgroLink Backend is running...');
