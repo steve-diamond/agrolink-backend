@@ -21,10 +21,23 @@ exports.filterTransactions = asyncHandler(async (req, res) => {
 });
 
 exports.exportTransactions = asyncHandler(async (req, res) => {
-	const txs = await WalletTransaction.find({ user: req.user._id });
+	// Cap export at 10 000 rows to prevent OOM on large accounts.
+	const MAX_EXPORT = 10_000;
+	const txs = await WalletTransaction.find({ user: req.user._id })
+		.sort('-createdAt')
+		.limit(MAX_EXPORT)
+		.lean();
 	const csv = [
 		'Date,Type,Amount,Reference,Description',
-		...txs.map(tx => `${tx.createdAt.toISOString()},${tx.type},${tx.amount},${tx.reference || ''},${tx.description || ''}`)
+		...txs.map((tx) =>
+			[
+				tx.createdAt.toISOString(),
+				tx.type,
+				tx.amount,
+				tx.reference || '',
+				(tx.description || '').replace(/,/g, ' '),
+			].join(',')
+		),
 	].join('\n');
 	res.setHeader('Content-Type', 'text/csv');
 	res.setHeader('Content-Disposition', 'attachment; filename=wallet_transactions.csv');

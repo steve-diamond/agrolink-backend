@@ -1,18 +1,21 @@
-# Use official Node.js LTS image
-FROM node:20-alpine
+# ── Build stage ──────────────────────────────────────────────
+FROM node:20-alpine AS base
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm install --production
+# Install PM2 globally for cluster-mode process management
+RUN npm install -g pm2@latest --loglevel=error
 
-# Copy the rest of the app
+COPY package*.json ./
+RUN npm ci --omit=dev
+
 COPY . .
 
-# Expose port
+# Create log directory used by pm2 ecosystem config
+RUN mkdir -p logs
+
 EXPOSE 5000
 
-# Start the app
-CMD ["npm", "start"]
+# PM2 runtime: runs ecosystem.config.js in cluster mode,
+# auto-restarts crashed workers, and forwards SIGTERM for graceful shutdown.
+CMD ["pm2-runtime", "ecosystem.config.js", "--env", "production"]

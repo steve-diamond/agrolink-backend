@@ -10,4 +10,12 @@ const WalletTransactionSchema = new Schema({
   description: { type: String },
 }, { timestamps: true });
 
+// ---------- Indexes ----------
+// User transaction history with type filter (walletController.filterTransactions)
+WalletTransactionSchema.index({ user: 1, type: 1, createdAt: -1 });
+// Date-range queries across all users (admin reporting)
+WalletTransactionSchema.index({ createdAt: -1 });
+// Idempotency check on payment reference
+WalletTransactionSchema.index({ reference: 1 }, { sparse: true });
+
 module.exports = mongoose.model('WalletTransaction', WalletTransactionSchema);

@@ -1,9 +1,49 @@
 const jwt = require('jsonwebtoken');
-
 const path = require('path');
 const User = require(path.join(__dirname, '../models/User'));
 const asyncHandler = require(path.join(__dirname, '../utils/asyncHandler'));
 const ApiError = require(path.join(__dirname, '../utils/apiError'));
+const { getRedisClient } = require('../config/cache');
+
+// 5-minute TTL keeps the cache fresh while absorbing burst traffic.
+const USER_CACHE_TTL_SECONDS = 300;
+const USER_CACHE_KEY = (id) => `user:${id}`;
+
+const getCachedUser = async (userId) => {
+  try {
+    const redis = getRedisClient();
+    if (!redis) return null;
+    const raw = await redis.get(USER_CACHE_KEY(userId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null; // Redis down — fall through to DB
+  }
+};
+
+const setCachedUser = async (userId, user) => {
+  try {
+    const redis = getRedisClient();
+    if (!redis) return;
+    await redis.setex(
+      USER_CACHE_KEY(userId),
+      USER_CACHE_TTL_SECONDS,
+      JSON.stringify(user),
+    );
+  } catch {
+    // non-fatal
+  }
+};
+
+/** Call this whenever a user is deleted/banned to purge from cache immediately. */
+const invalidateUserCache = async (userId) => {
+  try {
+    const redis = getRedisClient();
+    if (!redis) return;
+    await redis.del(USER_CACHE_KEY(userId));
+  } catch {
+    // non-fatal
+  }
+};
 
 const protect = asyncHandler(async (req, res, next) => {
   const authHeader = req.headers.authorization || '';
@@ -21,13 +61,19 @@ const protect = asyncHandler(async (req, res, next) => {
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (error) {
+  } catch {
     throw new ApiError(401, 'Invalid or expired token.');
   }
 
-  const user = await User.findById(decoded.id).select('-password');
+  // Try Redis cache first – avoids a DB round-trip on every request.
+  let user = await getCachedUser(decoded.id);
+
   if (!user) {
-    throw new ApiError(401, 'The user associated with this token no longer exists.');
+    user = await User.findById(decoded.id).select('-password').lean();
+    if (!user) {
+      throw new ApiError(401, 'The user associated with this token no longer exists.');
+    }
+    await setCachedUser(decoded.id, user);
   }
 
   req.user = user;
@@ -49,4 +95,5 @@ const authorize = (...roles) => (req, res, next) => {
 module.exports = {
   protect,
   authorize,
+  invalidateUserCache,
 };

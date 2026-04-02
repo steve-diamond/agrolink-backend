@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const path = require('path');
 const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
 const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
+const { enqueueSms } = require('../services/notificationQueue');
 
 const serializeOrder = (order) => {
   const rawOrder = typeof order.toObject === 'function' ? order.toObject() : order;
@@ -22,110 +23,144 @@ const serializeOrder = (order) => {
 };
 
 const createOrder = asyncHandler(async (req, res) => {
-  const { items, products: requestProducts, productId, quantity } = req.body;
+    const { items, products: requestProducts, productId, quantity } = req.body;
 
-  const inputItems = Array.isArray(items) && items.length > 0
-    ? items
-    : Array.isArray(requestProducts) && requestProducts.length > 0
-    ? requestProducts
-    : [{ productId, quantity }];
+    const inputItems = Array.isArray(items) && items.length > 0
+      ? items
+      : Array.isArray(requestProducts) && requestProducts.length > 0
+      ? requestProducts
+      : [{ productId, quantity }];
 
-  if (!Array.isArray(inputItems) || inputItems.length === 0) {
-    throw new ApiError(400, 'Order items are required.');
-  }
-
-  const normalizedItems = inputItems.map((item) => ({
-    productId: item.productId,
-    quantity: Number(item.quantity),
-  }));
-
-  normalizedItems.forEach((item) => {
-    if (!mongoose.Types.ObjectId.isValid(item.productId) || !item.quantity || item.quantity < 1) {
-      throw new ApiError(400, 'Each item must include a valid productId and quantity >= 1.');
-    }
-  });
-
-  const productIds = normalizedItems.map((item) => item.productId);
-  const dbProducts = await Product.find({ _id: { $in: productIds } });
-
-  if (dbProducts.length !== productIds.length) {
-    throw new ApiError(400, 'One or more products were not found.');
-  }
-
-  const productMap = new Map(dbProducts.map((product) => [product._id.toString(), product]));
-
-  const orderProducts = normalizedItems.map((item) => {
-    const product = productMap.get(item.productId.toString());
-
-    if (!product.approved) {
-      throw new ApiError(400, `Product is not approved for sale: ${product.name}.`);
+    if (!Array.isArray(inputItems) || inputItems.length === 0) {
+      throw new ApiError(400, 'Order items are required.');
     }
 
-    if (item.quantity > product.quantity) {
-      throw new ApiError(400, `Insufficient quantity for product: ${product.name}.`);
-    }
+    const normalizedItems = inputItems.map((item) => ({
+      productId: item.productId,
+      quantity: Number(item.quantity),
+    }));
 
-    return {
-      productId: product._id,
-      quantity: item.quantity,
-    };
-  });
+    normalizedItems.forEach((item) => {
+      if (!mongoose.Types.ObjectId.isValid(item.productId) || !item.quantity || item.quantity < 1) {
+        throw new ApiError(400, 'Each item must include a valid productId and quantity >= 1.');
+      }
+    });
 
+    // ── Atomic stock reservation via MongoDB multi-document transaction ──
+    // Without a transaction, two concurrent buyers could both pass the quantity
+    // check and over-sell the last unit.  The findOneAndUpdate with the
+    // $inc + condition acts as a compare-and-swap at the DB layer.
+    const session = await mongoose.startSession();
+    let populatedOrder;
 
-  const totalAmount = normalizedItems.reduce((sum, item) => {
-    const product = productMap.get(item.productId.toString());
-    return sum + (product.price * item.quantity);
-  }, 0);
+    try {
+      await session.withTransaction(async () => {
+        const productIds = normalizedItems.map((item) => item.productId);
 
-  // Fixed 10% commission
-  const commission = Number((totalAmount * 0.10).toFixed(2));
+        // Fetch inside the transaction so we see the latest committed state.
+        const dbProducts = await Product.find({ _id: { $in: productIds } }).session(session);
 
-  const order = await Order.create({
-    user: req.user._id,
-    products: orderProducts,
-    totalAmount,
-    commission,
-    status: 'pending',
-    paymentStatus: 'pending',
-  });
-
-  // Reserve stock immediately at order creation.
-  await Promise.all(
-    orderProducts.map((item) =>
-      Product.updateOne(
-        { _id: item.productId },
-        {
-          $inc: {
-            quantity: -item.quantity,
-          },
+        if (dbProducts.length !== productIds.length) {
+          throw new ApiError(400, 'One or more products were not found.');
         }
-      )
-    )
-  );
 
-  const populatedOrder = await Order.findById(order._id)
-    .populate('user', 'name email role')
-    .populate('products.productId', 'name price location farmer');
+        const productMap = new Map(dbProducts.map((p) => [p._id.toString(), p]));
 
-  res.status(201).json(serializeOrder(populatedOrder));
-});
+        const orderProducts = normalizedItems.map((item) => {
+          const product = productMap.get(item.productId.toString());
+          if (!product.approved) {
+            throw new ApiError(400, `Product is not approved for sale: ${product.name}.`);
+          }
+          if (item.quantity > product.quantity) {
+            throw new ApiError(400, `Insufficient stock for product: ${product.name}.`);
+          }
+          return { productId: product._id, quantity: item.quantity };
+        });
+
+        const totalAmount = normalizedItems.reduce((sum, item) => {
+          const product = productMap.get(item.productId.toString());
+          return sum + product.price * item.quantity;
+        }, 0);
+
+        const commission = Number((totalAmount * 0.1).toFixed(2));
+
+        // Atomically decrement stock – the $gte guard prevents going negative.
+        await Promise.all(
+          orderProducts.map((item) =>
+            Product.findOneAndUpdate(
+              { _id: item.productId, quantity: { $gte: item.quantity } },
+              { $inc: { quantity: -item.quantity } },
+              { session, new: true }
+            ).then((updated) => {
+              if (!updated) {
+                throw new ApiError(409, 'Stock was exhausted by a concurrent order. Please try again.');
+              }
+            })
+          )
+        );
+
+        const [order] = await Order.create(
+          [{ user: req.user._id, products: orderProducts, totalAmount, commission, status: 'pending', paymentStatus: 'pending' }],
+          { session }
+        );
+
+        populatedOrder = await Order.findById(order._id)
+          .session(session)
+          .populate('user', 'name email role')
+          .populate('products.productId', 'name price location farmer');
+      });
+    } finally {
+      session.endSession();
+    }
+
+    res.status(201).json(serializeOrder(populatedOrder));
+  });
 
 const getUserOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({ user: req.user._id })
-    .sort('-createdAt')
-    .populate('user', 'name email role')
-    .populate('products.productId', 'name price location farmer');
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+  const skip = (page - 1) * limit;
 
-  res.status(200).json(orders.map(serializeOrder));
+  const [orders, total] = await Promise.all([
+    Order.find({ user: req.user._id })
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(limit)
+      .populate('user', 'name email role')
+      .populate('products.productId', 'name price location farmer'),
+    Order.countDocuments({ user: req.user._id }),
+  ]);
+
+  res.status(200).json({
+    data: orders.map(serializeOrder),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+  });
 });
 
 const getAllOrders = asyncHandler(async (_req, res) => {
-  const orders = await Order.find()
-    .sort('-createdAt')
-    .populate('user', 'name email role')
-    .populate('products.productId', 'name price location farmer');
+  const req = _req;
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+  const skip = (page - 1) * limit;
 
-  res.status(200).json(orders.map(serializeOrder));
+  const filter = {};
+  if (req.query.status) filter.status = req.query.status;
+  if (req.query.paymentStatus) filter.paymentStatus = req.query.paymentStatus;
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter)
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(limit)
+      .populate('user', 'name email role')
+      .populate('products.productId', 'name price location farmer'),
+    Order.countDocuments(filter),
+  ]);
+
+  res.status(200).json({
+    data: orders.map(serializeOrder),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+  });
 });
 
 const getOrderById = asyncHandler(async (req, res) => {
@@ -182,34 +217,46 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Only the owning farmer can update this order status.');
   }
 
+  const wasDelivered = order.status === 'delivered';
+
   order.status = status;
   if (status === 'paid') {
     order.paymentStatus = 'paid';
   }
-  // Credit farmer wallet when delivered
-  if (status === 'delivered' && order.status !== 'delivered') {
-    // For each product, credit the farmer
+
+  // Credit farmer wallet once when transitioning into delivered.
+  if (status === 'delivered' && !wasDelivered) {
     const WalletController = require(path.join(__dirname, 'wallet.controller'));
     const User = require('../models/User');
+
     for (const item of order.products) {
       const product = item.productId;
       if (!product || !product.farmer) continue;
-      // Find farmer user
+
       const farmer = await User.findById(product.farmer);
       if (!farmer) continue;
-      // Calculate commission and farmer earning
+
       const productTotal = product.price * item.quantity;
-      const commission = Number((productTotal * 0.1).toFixed(2)); // 10% commission
+      const commission = Number((productTotal * 0.1).toFixed(2));
       const farmerAmount = productTotal - commission;
-      // Credit farmer wallet
-      await WalletController.creditWallet(farmer._id, farmerAmount, order._id, `Order delivered: ${order._id}`);
-      // Send SMS if phone number exists
+
+      await WalletController.creditWallet(
+        farmer._id,
+        farmerAmount,
+        order._id,
+        `Order delivered: ${order._id}`
+      );
+
       if (farmer.phone) {
-        const { sendSMS } = require(path.join(__dirname, '../services/smsService'));
-        sendSMS(farmer.phone, `Your order has been delivered. ₦${farmerAmount} credited to your wallet.`);
+        await enqueueSms({
+          to: farmer.phone,
+          message: `Your order has been delivered. NGN ${farmerAmount} credited to your wallet.`,
+          correlationId: String(order._id),
+        });
       }
     }
   }
+
   await order.save();
 
   const updatedOrder = await Order.findById(id)

@@ -6,7 +6,6 @@ const WalletSchema = new Schema({
   balance: { type: Number, default: 0 },
   currency: { type: String, default: 'NGN' },
   locked: { type: Boolean, default: false },
-  transactions: [{ type: Schema.Types.ObjectId, ref: 'WalletTransaction' }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Wallet', WalletSchema);
