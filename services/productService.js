@@ -3,11 +3,17 @@ const Product = require('../models/Product');
 const path = require('path');
 const ApiError = require(path.join(__dirname, '..', 'utils', 'apiError'));
 
-async function listProductsService({ page = 1, limit = 20, category, search, minPrice, maxPrice, sort = '-createdAt' }) {
+async function listProductsService({ page = 1, limit = 20, category, search, minPrice, maxPrice, sort = '-createdAt', farmer, approved }) {
   const pageNumber = Math.max(Number(page), 1);
   const limitNumber = Math.min(Math.max(Number(limit), 1), 100);
   const filter = { isActive: true };
   if (category) filter.category = category;
+  if (farmer && mongoose.Types.ObjectId.isValid(farmer)) {
+    filter.farmer = farmer;
+  }
+  if (approved !== undefined) {
+    filter.approved = approved === true || approved === 'true';
+  }
   if (search) {
     filter.$or = [
       { name: { $regex: search, $options: 'i' } },
