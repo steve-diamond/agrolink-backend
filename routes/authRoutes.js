@@ -33,6 +33,25 @@ router.post("/login", async (req, res) => {
       return res.status(500).json({ message: "JWT_SECRET is not configured" });
     }
 
+    // TEMPORARY: Allow admin login bypass for development
+    if (email === "admin@agrolink.com" && password === "agro123456") {
+      const token = jwt.sign(
+        { id: "admin-dev", role: "admin" },
+        process.env.JWT_SECRET,
+        { expiresIn: "1d" }
+      );
+      return res.json({ 
+        token, 
+        user: {
+          _id: "admin-dev",
+          name: "Admin",
+          email: "admin@agrolink.com",
+          role: "admin",
+          approved: true
+        }
+      });
+    }
+
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) return res.status(400).json({ message: "User not found" });

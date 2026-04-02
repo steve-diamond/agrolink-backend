@@ -14,6 +14,8 @@ connectDB()
     });
   })
   .catch((err) => {
-    console.error('MongoDB connection failed. Server not started:', err.message);
-    process.exit(1);
+    console.warn('⚠️  MongoDB connection failed, but starting server anyway (dev mode):', err.message);
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT} (without MongoDB)`);
+    });
   });
