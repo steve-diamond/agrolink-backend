@@ -20,11 +20,13 @@ const getProductById = asyncHandler(async (req, res) => {
 });
 
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, category, price, quantity, unit } = req.body;
+  const { name, description, category, location, imageUrl, price, quantity, unit } = req.body;
   const product = await createProductService({
     name,
     description,
     category,
+    location,
+    imageUrl,
     price,
     quantity,
     unit,

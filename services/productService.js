@@ -53,14 +53,16 @@ async function getProductByIdService(id) {
   return product;
 }
 
-async function createProductService({ name, description, category, price, quantity, unit, farmerId }) {
-  if (!name || !description || !category || price === undefined || quantity === undefined) {
-    throw new ApiError(400, 'name, description, category, price, and quantity are required.');
+async function createProductService({ name, description, category, location, imageUrl, price, quantity, unit, farmerId }) {
+  if (!name || !description || !category || !location || price === undefined || quantity === undefined) {
+    throw new ApiError(400, 'name, description, category, location, price, and quantity are required.');
   }
   const product = await Product.create({
     name,
     description,
     category,
+    location,
+    imageUrl,
     price,
     quantity,
     unit,
@@ -75,7 +77,7 @@ async function updateProductService(id, updateFields, userId) {
   }
   const product = await Product.findOne({ _id: id, farmer: userId, isActive: true });
   if (!product) throw new ApiError(404, 'Product not found or not owned by you.');
-  const allowedFields = ['name', 'description', 'category', 'price', 'quantity', 'unit', 'isActive'];
+  const allowedFields = ['name', 'description', 'category', 'location', 'imageUrl', 'price', 'quantity', 'unit', 'isActive'];
   allowedFields.forEach((field) => {
     if (updateFields[field] !== undefined) {
       product[field] = updateFields[field];
