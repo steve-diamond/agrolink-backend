@@ -52,6 +52,24 @@ const approveProduct = async (req, res) => {
 	}
 };
 
+const approveUser = async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		const user = await User.findById(userId).select("-password");
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		user.approved = true;
+		await user.save();
+
+		return res.status(200).json({ message: "User approved successfully", user });
+	} catch (error) {
+		return res.status(500).json({ message: "Failed to approve user", error: error.message });
+	}
+};
+
 const deleteUser = async (req, res) => {
 	try {
 		const { userId } = req.params;
@@ -84,6 +102,7 @@ module.exports = {
 	getAllUsers,
 	getAllProducts,
 	approveProduct,
+	approveUser,
 	deleteUser,
 	getAllOrders,
 };

@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllUsers, getAllProducts, approveProduct, deleteUser, getAllOrders } = require('../controllers/adminController');
+const { getAllUsers, getAllProducts, approveProduct, approveUser, deleteUser, getAllOrders } = require('../controllers/adminController');
 
 const router = express.Router();
 
@@ -11,6 +11,9 @@ router.get('/products', getAllProducts);
 
 // Approve a product
 router.patch('/products/:productId/approve', approveProduct);
+
+// Approve a user
+router.patch('/users/:userId/approve', approveUser);
 
 // Delete a user
 router.delete('/users/:userId', deleteUser);
