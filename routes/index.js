@@ -9,6 +9,11 @@ const adminSubscriptionRoutes = require('../routes/admin.subscription.routes');
 const walletRoutes = require('../routes/walletRoutes');
 const withdrawalRoutes = require('../routes/withdrawal.routes');
 const paymentRoutes = require('../routes/paymentRoutes');
+const loanRoutes = require('../routes/loanRoutes');
+const logisticsRoutes = require('../routes/logisticsRoutes');
+const warehouseRoutes = require('../routes/warehouseRoutes');
+const intelligenceRoutes = require('../routes/intelligence.routes');
+const advisoryRoutes = require('../routes/advisory.routes');
 // Delivery routes placeholder (to be implemented)
 
 const router = express.Router();
@@ -22,6 +27,11 @@ router.use('/admin', adminSubscriptionRoutes);
 router.use('/wallet', walletRoutes);
 router.use('/payment', paymentRoutes);
 router.use('/withdrawal', withdrawalRoutes);
+router.use('/loans', loanRoutes);
+router.use('/logistics', logisticsRoutes);
+router.use('/warehouses', warehouseRoutes);
+router.use('/intelligence', intelligenceRoutes);
+router.use('/advisory', advisoryRoutes);
 const deliveryRoutes = require('../routes/delivery.routes');
 router.use('/delivery', deliveryRoutes);
 
