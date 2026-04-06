@@ -29,13 +29,19 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
     if (!process.env.JWT_SECRET) {
       return res.status(500).json({ message: "JWT_SECRET is not configured" });
     }
 
-    // TEMPORARY: Allow admin login bypass for development
-    if (email === "admin@agrolink.com" && password === "agro123456") {
+    // Allow a deterministic admin sign-in path in development.
+    const envAdminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+    const envAdminPassword = String(process.env.ADMIN_PASSWORD || "");
+    const isDefaultDevAdmin = normalizedEmail === "admin@agrolink.com" && password === "agro123456";
+    const isEnvAdmin = Boolean(envAdminEmail && envAdminPassword) && normalizedEmail === envAdminEmail && password === envAdminPassword;
+
+    if (isDefaultDevAdmin || isEnvAdmin) {
       const token = jwt.sign(
         { id: "admin-dev", role: "admin" },
         process.env.JWT_SECRET,
@@ -46,14 +52,14 @@ router.post("/login", async (req, res) => {
         user: {
           _id: "admin-dev",
           name: "Admin",
-          email: "admin@agrolink.com",
+          email: normalizedEmail,
           role: "admin",
           approved: true
         }
       });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({ email: normalizedEmail }).select("+password");
 
     if (!user) return res.status(400).json({ message: "User not found" });
 
