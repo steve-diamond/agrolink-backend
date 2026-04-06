@@ -19,6 +19,7 @@ const orderRoutes = require('./routes/order.routes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const productRoutes = require('./routes/productRoutes');
 const farmerApplicationRoutes = require('./routes/farmerApplicationRoutes');
+const buyerApplicationRoutes = require('./routes/buyerApplicationRoutes');
 const onboardingRoutes = require('./routes/onboardingRoutes');
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
 
@@ -79,6 +80,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/farmer-applications', farmerApplicationRoutes);
+app.use('/api/buyer-applications', buyerApplicationRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/v1', apiRoutes);
 
