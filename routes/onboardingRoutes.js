@@ -53,6 +53,30 @@ const normalizePhone = (rawPhone = '') => {
 
 const isValidNigerianPhone = (phone) => /^\+234\d{10}$/.test(phone);
 
+const maskPhone = (phone = '') => {
+  const normalized = String(phone);
+  if (!normalized.startsWith('+234') || normalized.length < 7) return 'redacted';
+  return `${normalized.slice(0, 7)}****${normalized.slice(-2)}`;
+};
+
+const logOtpEvent = (req, event, details = {}) => {
+  try {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        type: 'otp_event',
+        event,
+        requestId: req.requestId,
+        ip: getClientIp(req),
+        ...details,
+        timestamp: new Date().toISOString(),
+      })
+    );
+  } catch (_error) {
+    // Do not fail request flow if logging fails.
+  }
+};
+
 const pruneTimestamps = (timestamps, windowMs) => timestamps.filter((time) => Date.now() - time < windowMs);
 
 const getClientIp = (req) => {
@@ -121,11 +145,13 @@ router.post('/otp/send', (req, res) => {
   const ip = getClientIp(req);
 
   if (!isValidNigerianPhone(phone)) {
+    logOtpEvent(req, 'otp_send_invalid_phone', { phone: maskPhone(phone) });
     return res.status(400).json({ message: 'Phone number must be a valid Nigerian number.' });
   }
 
   if (!canSendOtp(otpSendByPhone, phone, OTP_SEND_MAX_PER_PHONE)) {
     const retryAfterSeconds = getRetryAfterForSend(otpSendByPhone, phone);
+    logOtpEvent(req, 'otp_send_blocked_phone_limit', { phone: maskPhone(phone), retryAfterSeconds });
     res.set('Retry-After', String(retryAfterSeconds));
     return res.status(429).json({
       message: 'Too many OTP requests for this phone. Please wait before trying again.',
@@ -135,6 +161,7 @@ router.post('/otp/send', (req, res) => {
 
   if (!canSendOtp(otpSendByIp, ip, OTP_SEND_MAX_PER_IP)) {
     const retryAfterSeconds = getRetryAfterForSend(otpSendByIp, ip);
+    logOtpEvent(req, 'otp_send_blocked_ip_limit', { phone: maskPhone(phone), retryAfterSeconds });
     res.set('Retry-After', String(retryAfterSeconds));
     return res.status(429).json({
       message: 'Too many OTP requests from this network. Please wait before trying again.',
@@ -162,6 +189,8 @@ router.post('/otp/send', (req, res) => {
     payload.otp = otp;
   }
 
+  logOtpEvent(req, 'otp_send_success', { phone: maskPhone(phone), expiresInSeconds: 300 });
+
   return res.json(payload);
 });
 
@@ -171,16 +200,19 @@ router.post('/otp/verify', (req, res) => {
   const otpRef = String(req.body?.otpRef || '').trim();
 
   if (!isValidNigerianPhone(phone)) {
+    logOtpEvent(req, 'otp_verify_invalid_phone', { phone: maskPhone(phone) });
     return res.status(400).json({ message: 'Phone number must be a valid Nigerian number.' });
   }
 
   if (!/^\d{6}$/.test(otp)) {
+    logOtpEvent(req, 'otp_verify_invalid_format', { phone: maskPhone(phone) });
     return res.status(400).json({ message: 'OTP must be 6 digits.' });
   }
 
   const verifyLock = getVerifyLock(phone);
   if (verifyLock) {
     const retryAfterSeconds = Math.max(1, Math.ceil((verifyLock.blockedUntil - Date.now()) / 1000));
+    logOtpEvent(req, 'otp_verify_blocked_lockout', { phone: maskPhone(phone), retryAfterSeconds });
     res.set('Retry-After', String(retryAfterSeconds));
     return res.status(429).json({
       message: 'Too many failed OTP attempts. Please wait before trying again.',
@@ -192,57 +224,68 @@ router.post('/otp/verify', (req, res) => {
     try {
       const decoded = jwt.verify(otpRef, otpSecret);
       if (decoded?.purpose !== 'onboarding-otp') {
+        logOtpEvent(req, 'otp_verify_invalid_ref_purpose', { phone: maskPhone(phone) });
         return res.status(400).json({ message: 'Invalid OTP reference. Please request a new OTP.' });
       }
 
       if (decoded?.phone !== phone) {
+        logOtpEvent(req, 'otp_verify_ref_phone_mismatch', { phone: maskPhone(phone) });
         return res.status(400).json({ message: 'OTP does not match this phone number.' });
       }
 
       if (String(decoded?.otp || '') !== otp) {
         const failure = recordVerifyFailure(phone);
         if (failure.locked) {
+          logOtpEvent(req, 'otp_verify_blocked_after_failures', { phone: maskPhone(phone), retryAfterSeconds: failure.retryAfterSeconds });
           res.set('Retry-After', String(failure.retryAfterSeconds));
           return res.status(429).json({
             message: 'Too many failed OTP attempts. Please wait before trying again.',
             retryAfterSeconds: failure.retryAfterSeconds,
           });
         }
+        logOtpEvent(req, 'otp_verify_incorrect_code', { phone: maskPhone(phone), remainingAttempts: failure.remainingAttempts });
         return res.status(400).json({ message: 'Incorrect OTP. Please try again.' });
       }
 
       otpStore.delete(phone);
       clearVerifyFailures(phone);
+      logOtpEvent(req, 'otp_verify_success', { phone: maskPhone(phone), mode: 'otpRef' });
       return res.json({ message: 'Phone verified successfully.', verified: true, phone });
     } catch (_error) {
+      logOtpEvent(req, 'otp_verify_invalid_or_expired_ref', { phone: maskPhone(phone) });
       return res.status(400).json({ message: 'OTP expired or invalid. Please request a new one.' });
     }
   }
 
   const record = otpStore.get(phone);
   if (!record) {
+    logOtpEvent(req, 'otp_verify_missing_record', { phone: maskPhone(phone), mode: 'legacy-store' });
     return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
   }
 
   if (Date.now() > record.expiresAt) {
     otpStore.delete(phone);
+    logOtpEvent(req, 'otp_verify_expired', { phone: maskPhone(phone), mode: 'legacy-store' });
     return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
   }
 
   if (record.otp !== otp) {
     const failure = recordVerifyFailure(phone);
     if (failure.locked) {
+      logOtpEvent(req, 'otp_verify_blocked_after_failures', { phone: maskPhone(phone), retryAfterSeconds: failure.retryAfterSeconds });
       res.set('Retry-After', String(failure.retryAfterSeconds));
       return res.status(429).json({
         message: 'Too many failed OTP attempts. Please wait before trying again.',
         retryAfterSeconds: failure.retryAfterSeconds,
       });
     }
+    logOtpEvent(req, 'otp_verify_incorrect_code', { phone: maskPhone(phone), remainingAttempts: failure.remainingAttempts, mode: 'legacy-store' });
     return res.status(400).json({ message: 'Incorrect OTP. Please try again.' });
   }
 
   otpStore.delete(phone);
   clearVerifyFailures(phone);
+  logOtpEvent(req, 'otp_verify_success', { phone: maskPhone(phone), mode: 'legacy-store' });
   return res.json({ message: 'Phone verified successfully.', verified: true, phone });
 });
 
