@@ -25,8 +25,17 @@ const BANKS = [
 ];
 
 const otpStore = new Map();
+const otpSendByPhone = new Map();
+const otpSendByIp = new Map();
+const otpVerifyFailures = new Map();
 const uploadRoot = path.join(__dirname, '..', 'uploads');
 const otpSecret = process.env.OTP_SECRET || process.env.JWT_SECRET || 'agrolink-otp-dev-secret';
+
+const OTP_SEND_WINDOW_MS = 10 * 60 * 1000;
+const OTP_SEND_MAX_PER_PHONE = 5;
+const OTP_SEND_MAX_PER_IP = 12;
+const OTP_VERIFY_MAX_FAILURES = 5;
+const OTP_VERIFY_LOCK_MS = 15 * 60 * 1000;
 
 const ensureUploadDirectory = (category) => {
   const dir = path.join(uploadRoot, category);
@@ -44,6 +53,58 @@ const normalizePhone = (rawPhone = '') => {
 
 const isValidNigerianPhone = (phone) => /^\+234\d{10}$/.test(phone);
 
+const pruneTimestamps = (timestamps, windowMs) => timestamps.filter((time) => Date.now() - time < windowMs);
+
+const getClientIp = (req) => {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.ip || 'unknown';
+};
+
+const registerSendAttempt = (store, key) => {
+  const current = pruneTimestamps(store.get(key) || [], OTP_SEND_WINDOW_MS);
+  current.push(Date.now());
+  store.set(key, current);
+  return current.length;
+};
+
+const canSendOtp = (store, key, limit) => {
+  const current = pruneTimestamps(store.get(key) || [], OTP_SEND_WINDOW_MS);
+  store.set(key, current);
+  return current.length < limit;
+};
+
+const getRetryAfterForSend = (store, key) => {
+  const current = pruneTimestamps(store.get(key) || [], OTP_SEND_WINDOW_MS);
+  if (!current.length) return 0;
+  const oldest = Math.min(...current);
+  return Math.max(1, Math.ceil((oldest + OTP_SEND_WINDOW_MS - Date.now()) / 1000));
+};
+
+const getVerifyLock = (phone) => {
+  const record = otpVerifyFailures.get(phone);
+  if (!record) return null;
+  if (!record.blockedUntil || Date.now() > record.blockedUntil) {
+    otpVerifyFailures.delete(phone);
+    return null;
+  }
+  return record;
+};
+
+const recordVerifyFailure = (phone) => {
+  const existing = otpVerifyFailures.get(phone) || { count: 0, blockedUntil: 0 };
+  const nextCount = existing.count + 1;
+  if (nextCount >= OTP_VERIFY_MAX_FAILURES) {
+    otpVerifyFailures.set(phone, { count: 0, blockedUntil: Date.now() + OTP_VERIFY_LOCK_MS });
+    return { locked: true, retryAfterSeconds: Math.ceil(OTP_VERIFY_LOCK_MS / 1000) };
+  }
+  otpVerifyFailures.set(phone, { count: nextCount, blockedUntil: 0 });
+  return { locked: false, remainingAttempts: OTP_VERIFY_MAX_FAILURES - nextCount };
+};
+
+const clearVerifyFailures = (phone) => {
+  otpVerifyFailures.delete(phone);
+};
+
 const inferExtension = (mimeType = '', fileName = '') => {
   const lowerName = String(fileName).toLowerCase();
   if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return 'jpg';
@@ -57,10 +118,32 @@ const inferExtension = (mimeType = '', fileName = '') => {
 
 router.post('/otp/send', (req, res) => {
   const phone = normalizePhone(req.body?.phone || '');
+  const ip = getClientIp(req);
 
   if (!isValidNigerianPhone(phone)) {
     return res.status(400).json({ message: 'Phone number must be a valid Nigerian number.' });
   }
+
+  if (!canSendOtp(otpSendByPhone, phone, OTP_SEND_MAX_PER_PHONE)) {
+    const retryAfterSeconds = getRetryAfterForSend(otpSendByPhone, phone);
+    res.set('Retry-After', String(retryAfterSeconds));
+    return res.status(429).json({
+      message: 'Too many OTP requests for this phone. Please wait before trying again.',
+      retryAfterSeconds,
+    });
+  }
+
+  if (!canSendOtp(otpSendByIp, ip, OTP_SEND_MAX_PER_IP)) {
+    const retryAfterSeconds = getRetryAfterForSend(otpSendByIp, ip);
+    res.set('Retry-After', String(retryAfterSeconds));
+    return res.status(429).json({
+      message: 'Too many OTP requests from this network. Please wait before trying again.',
+      retryAfterSeconds,
+    });
+  }
+
+  registerSendAttempt(otpSendByPhone, phone);
+  registerSendAttempt(otpSendByIp, ip);
 
   const otp = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = Date.now() + 5 * 60 * 1000;
@@ -95,6 +178,16 @@ router.post('/otp/verify', (req, res) => {
     return res.status(400).json({ message: 'OTP must be 6 digits.' });
   }
 
+  const verifyLock = getVerifyLock(phone);
+  if (verifyLock) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((verifyLock.blockedUntil - Date.now()) / 1000));
+    res.set('Retry-After', String(retryAfterSeconds));
+    return res.status(429).json({
+      message: 'Too many failed OTP attempts. Please wait before trying again.',
+      retryAfterSeconds,
+    });
+  }
+
   if (otpRef) {
     try {
       const decoded = jwt.verify(otpRef, otpSecret);
@@ -107,10 +200,19 @@ router.post('/otp/verify', (req, res) => {
       }
 
       if (String(decoded?.otp || '') !== otp) {
+        const failure = recordVerifyFailure(phone);
+        if (failure.locked) {
+          res.set('Retry-After', String(failure.retryAfterSeconds));
+          return res.status(429).json({
+            message: 'Too many failed OTP attempts. Please wait before trying again.',
+            retryAfterSeconds: failure.retryAfterSeconds,
+          });
+        }
         return res.status(400).json({ message: 'Incorrect OTP. Please try again.' });
       }
 
       otpStore.delete(phone);
+      clearVerifyFailures(phone);
       return res.json({ message: 'Phone verified successfully.', verified: true, phone });
     } catch (_error) {
       return res.status(400).json({ message: 'OTP expired or invalid. Please request a new one.' });
@@ -128,10 +230,19 @@ router.post('/otp/verify', (req, res) => {
   }
 
   if (record.otp !== otp) {
+    const failure = recordVerifyFailure(phone);
+    if (failure.locked) {
+      res.set('Retry-After', String(failure.retryAfterSeconds));
+      return res.status(429).json({
+        message: 'Too many failed OTP attempts. Please wait before trying again.',
+        retryAfterSeconds: failure.retryAfterSeconds,
+      });
+    }
     return res.status(400).json({ message: 'Incorrect OTP. Please try again.' });
   }
 
   otpStore.delete(phone);
+  clearVerifyFailures(phone);
   return res.json({ message: 'Phone verified successfully.', verified: true, phone });
 });
 
