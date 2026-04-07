@@ -35,10 +35,14 @@ router.post("/login", async (req, res) => {
       return res.status(500).json({ message: "JWT_SECRET is not configured" });
     }
 
-    // Allow a deterministic admin sign-in path in development.
+    // Allow deterministic admin sign-in in development for local testing.
     const envAdminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
     const envAdminPassword = String(process.env.ADMIN_PASSWORD || "");
-    const isDefaultDevAdmin = normalizedEmail === "admin@agrolink.com" && password === "agro123456";
+    const isDevMode = process.env.NODE_ENV !== "production";
+    const defaultDevAdminEmails = new Set(["admin@agrolink.com", "admin@dosagrolink.ng"]);
+    const defaultDevAdminPassword = String(process.env.DEFAULT_DEV_ADMIN_PASSWORD || "agro123456");
+    const isDefaultDevAdmin =
+      isDevMode && defaultDevAdminEmails.has(normalizedEmail) && password === defaultDevAdminPassword;
     const isEnvAdmin = Boolean(envAdminEmail && envAdminPassword) && normalizedEmail === envAdminEmail && password === envAdminPassword;
 
     if (isDefaultDevAdmin || isEnvAdmin) {
