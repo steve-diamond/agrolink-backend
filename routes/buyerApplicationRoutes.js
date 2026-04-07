@@ -3,6 +3,14 @@ const BuyerApplication = require('../models/BuyerApplication');
 
 const router = express.Router();
 
+const ALLOWED_VERIFICATION_CHANNELS = ['email', 'whatsapp'];
+
+const sanitizePreferredVerification = (application = {}) => {
+  const preferredVerification = String(application?.preferredVerification || '').trim().toLowerCase();
+  if (!ALLOWED_VERIFICATION_CHANNELS.includes(preferredVerification)) return null;
+  return preferredVerification;
+};
+
 const buildApplicationId = () => {
   const random = Math.floor(Math.random() * 90000 + 10000);
   return `AGR-BUY-${random}`;
@@ -11,9 +19,15 @@ const buildApplicationId = () => {
 const buildSubmissionMeta = (applicationId, application) => {
   const hasBusinessProof = Boolean(application?.businessProofName || application?.businessProofUrl);
   const hasId = Boolean(application?.idPhotoName || application?.idPhotoUrl);
+  const preferredVerification = sanitizePreferredVerification(application) || 'email';
   return {
     buyerId: applicationId,
     verificationPending: !(hasBusinessProof && hasId),
+    preferredVerification,
+    verificationChannelMessage:
+      preferredVerification === 'whatsapp'
+        ? 'Verification updates will be sent via WhatsApp.'
+        : 'Verification updates will be sent via email.',
     reviewSla: '2_business_days',
     smsTemplate: `Your buyer ID is ${applicationId}. Log in to start purchasing.`,
   };
@@ -70,7 +84,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Application payload is required.' });
     }
 
+    const preferredVerification = sanitizePreferredVerification(application);
+    if (!preferredVerification) {
+      return res.status(400).json({ message: 'preferredVerification must be either email or whatsapp.' });
+    }
+
     const email = String(account.email).trim().toLowerCase();
+    const normalizedApplication = {
+      ...application,
+      preferredVerification,
+    };
     const nextStatus = ['draft', 'pending', 'approved', 'rejected', 'activation_completed', 'queued'].includes(status)
       ? status
       : 'pending';
@@ -83,7 +106,7 @@ router.post('/', async (req, res) => {
         email,
         phone: String(account.phone).trim(),
       };
-      existing.application = application;
+      existing.application = normalizedApplication;
       existing.status = nextStatus;
       if (!existing.applicationId) {
         existing.applicationId = buildApplicationId();
@@ -107,7 +130,7 @@ router.post('/', async (req, res) => {
         email,
         phone: String(account.phone).trim(),
       },
-      application,
+      application: normalizedApplication,
     });
 
     return res.status(201).json({

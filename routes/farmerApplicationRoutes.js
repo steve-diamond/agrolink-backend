@@ -3,6 +3,14 @@ const FarmerApplication = require('../models/FarmerApplication');
 
 const router = express.Router();
 
+const ALLOWED_VERIFICATION_CHANNELS = ['email', 'whatsapp'];
+
+const sanitizePreferredVerification = (application = {}) => {
+  const preferredVerification = String(application?.preferredVerification || '').trim().toLowerCase();
+  if (!ALLOWED_VERIFICATION_CHANNELS.includes(preferredVerification)) return null;
+  return preferredVerification;
+};
+
 const buildApplicationId = () => {
   const random = Math.floor(Math.random() * 900000 + 100000);
   return `AGR-${random}`;
@@ -10,9 +18,15 @@ const buildApplicationId = () => {
 
 const buildSubmissionMeta = (applicationId, application) => {
   const hasId = Boolean(application?.idPhotoName || application?.idPhotoUrl);
+  const preferredVerification = sanitizePreferredVerification(application) || 'email';
   return {
     farmerId: applicationId,
     kycPending: !hasId,
+    preferredVerification,
+    verificationChannelMessage:
+      preferredVerification === 'whatsapp'
+        ? 'Verification updates will be sent via WhatsApp.'
+        : 'Verification updates will be sent via email.',
     smsTemplate: `Your Dos Agrolink farmer ID is ${applicationId}. Use this to log in. Welcome!`,
   };
 };
@@ -68,7 +82,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Application payload is required.' });
     }
 
+    const preferredVerification = sanitizePreferredVerification(application);
+    if (!preferredVerification) {
+      return res.status(400).json({ message: 'preferredVerification must be either email or whatsapp.' });
+    }
+
     const email = String(account.email).trim().toLowerCase();
+    const normalizedApplication = {
+      ...application,
+      preferredVerification,
+    };
 
     const existing = await FarmerApplication.findOne({ 'account.email': email });
     const nextStatus = ['draft', 'submitted', 'queued'].includes(status) ? status : 'submitted';
@@ -79,7 +102,7 @@ router.post('/', async (req, res) => {
         email,
         phone: String(account.phone).trim(),
       };
-      existing.application = application;
+      existing.application = normalizedApplication;
       existing.status = nextStatus;
       if (!existing.applicationId) {
         existing.applicationId = buildApplicationId();
@@ -103,7 +126,7 @@ router.post('/', async (req, res) => {
         email,
         phone: String(account.phone).trim(),
       },
-      application,
+      application: normalizedApplication,
     });
 
     return res.status(201).json({
