@@ -35,15 +35,28 @@ router.post("/login", async (req, res) => {
       return res.status(500).json({ message: "JWT_SECRET is not configured" });
     }
 
-    // Allow deterministic admin sign-in in development for local testing.
     const envAdminEmail = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
     const envAdminPassword = String(process.env.ADMIN_PASSWORD || "");
+    const canonicalAdminEmail = envAdminEmail || "admin@agrolink.com";
+    const adminEmailAliases = new Set([
+      "admin@agrolink.com",
+      "admin@agrolink.ng",
+      "admin@dosagrolink.ng",
+    ]);
+    const normalizedLookupEmail = adminEmailAliases.has(normalizedEmail)
+      ? canonicalAdminEmail
+      : normalizedEmail;
+
+    // Allow deterministic admin sign-in in development for local testing.
     const isDevMode = process.env.NODE_ENV !== "production";
-    const defaultDevAdminEmails = new Set(["admin@agrolink.com", "admin@dosagrolink.ng"]);
+    const defaultDevAdminEmails = adminEmailAliases;
     const defaultDevAdminPassword = String(process.env.DEFAULT_DEV_ADMIN_PASSWORD || "agro123456");
     const isDefaultDevAdmin =
       isDevMode && defaultDevAdminEmails.has(normalizedEmail) && password === defaultDevAdminPassword;
-    const isEnvAdmin = Boolean(envAdminEmail && envAdminPassword) && normalizedEmail === envAdminEmail && password === envAdminPassword;
+    const isEnvAdmin =
+      Boolean(envAdminEmail && envAdminPassword) &&
+      normalizedLookupEmail === envAdminEmail &&
+      password === envAdminPassword;
 
     if (isDefaultDevAdmin || isEnvAdmin) {
       const token = jwt.sign(
@@ -56,14 +69,14 @@ router.post("/login", async (req, res) => {
         user: {
           _id: "admin-dev",
           name: "Admin",
-          email: normalizedEmail,
+          email: normalizedLookupEmail,
           role: "admin",
           approved: true
         }
       });
     }
 
-    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+    const user = await User.findOne({ email: normalizedLookupEmail }).select("+password");
 
     if (!user) return res.status(400).json({ message: "User not found" });
 
