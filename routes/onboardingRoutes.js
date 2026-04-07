@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ const BANKS = [
 
 const otpStore = new Map();
 const uploadRoot = path.join(__dirname, '..', 'uploads');
+const otpSecret = process.env.OTP_SECRET || process.env.JWT_SECRET || 'agrolink-otp-dev-secret';
 
 const ensureUploadDirectory = (category) => {
   const dir = path.join(uploadRoot, category);
@@ -62,6 +64,7 @@ router.post('/otp/send', (req, res) => {
 
   const otp = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = Date.now() + 5 * 60 * 1000;
+  const otpRef = jwt.sign({ purpose: 'onboarding-otp', phone, otp }, otpSecret, { expiresIn: '5m' });
 
   otpStore.set(phone, { otp, expiresAt });
 
@@ -69,6 +72,7 @@ router.post('/otp/send', (req, res) => {
     message: 'OTP sent successfully.',
     phone,
     expiresInSeconds: 300,
+    otpRef,
   };
 
   if (process.env.NODE_ENV !== 'production') {
@@ -81,6 +85,7 @@ router.post('/otp/send', (req, res) => {
 router.post('/otp/verify', (req, res) => {
   const phone = normalizePhone(req.body?.phone || '');
   const otp = String(req.body?.otp || '').trim();
+  const otpRef = String(req.body?.otpRef || '').trim();
 
   if (!isValidNigerianPhone(phone)) {
     return res.status(400).json({ message: 'Phone number must be a valid Nigerian number.' });
@@ -88,6 +93,28 @@ router.post('/otp/verify', (req, res) => {
 
   if (!/^\d{6}$/.test(otp)) {
     return res.status(400).json({ message: 'OTP must be 6 digits.' });
+  }
+
+  if (otpRef) {
+    try {
+      const decoded = jwt.verify(otpRef, otpSecret);
+      if (decoded?.purpose !== 'onboarding-otp') {
+        return res.status(400).json({ message: 'Invalid OTP reference. Please request a new OTP.' });
+      }
+
+      if (decoded?.phone !== phone) {
+        return res.status(400).json({ message: 'OTP does not match this phone number.' });
+      }
+
+      if (String(decoded?.otp || '') !== otp) {
+        return res.status(400).json({ message: 'Incorrect OTP. Please try again.' });
+      }
+
+      otpStore.delete(phone);
+      return res.json({ message: 'Phone verified successfully.', verified: true, phone });
+    } catch (_error) {
+      return res.status(400).json({ message: 'OTP expired or invalid. Please request a new one.' });
+    }
   }
 
   const record = otpStore.get(phone);
