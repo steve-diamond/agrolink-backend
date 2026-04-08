@@ -4,10 +4,18 @@ const User = require("./../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 // Register
 router.post("/register", async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        message: "Database temporarily unavailable. Please try again shortly.",
+        code: "DB_UNAVAILABLE",
+      });
+    }
+
     const { name, email, password, role } = req.body;
 
     const user = new User({
