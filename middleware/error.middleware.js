@@ -5,6 +5,15 @@ const notFoundHandler = (req, res, next) => {
 };
 
 const normalizeError = (error) => {
+  const message = String(error?.message || '');
+
+  if (
+    error?.name === 'MongooseServerSelectionError' ||
+    /users\.insertOne\(\)|buffering timed out|server selection timed out|mongodb|mongo|econnrefused/i.test(message)
+  ) {
+    return new ApiError(503, 'Service is temporarily unavailable. Please try again shortly.');
+  }
+
   if (error.name === 'CastError') {
     return new ApiError(400, `Invalid ${error.path}: ${error.value}`);
   }
