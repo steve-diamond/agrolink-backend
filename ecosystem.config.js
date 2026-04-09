@@ -14,11 +14,9 @@ module.exports = {
       max_memory_restart: '512M',
       env: {
         NODE_ENV: 'development',
-        PORT: 5000,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 5000,
       },
       // Zero-downtime deploys: wait for new worker to be ready before killing the old one
       wait_ready: true,
