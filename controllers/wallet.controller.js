@@ -94,8 +94,6 @@ exports.getWalletTransactions = asyncHandler(async (req, res) => {
 });
 
 
-const ApiError = require('../utils/apiError');
-
 exports.requestWithdrawal = asyncHandler(async (req, res) => {
   // For demo: just mark as requested, admin must approve in real system
   const { amount } = req.body;
