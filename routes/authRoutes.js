@@ -29,7 +29,28 @@ router.post("/register", async (req, res) => {
 
     res.json({ message: "User registered successfully" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    const message = String(error?.message || "");
+    const isDbUnavailable =
+      /buffering timed out|server selection timed out|mongodb|mongo|econnrefused|network/i.test(message);
+
+    if (isDbUnavailable) {
+      return res.status(503).json({
+        message: "Database temporarily unavailable. Please try again shortly.",
+        code: "DB_UNAVAILABLE",
+      });
+    }
+
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message: "An account with this email already exists.",
+        code: "EMAIL_EXISTS",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Unable to register right now. Please try again.",
+      code: "REGISTER_FAILED",
+    });
   }
 });
 
