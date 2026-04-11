@@ -1,5 +1,14 @@
 const express = require('express');
-const { getAllUsers, getAllProducts, approveProduct, approveUser, deleteUser, getAllOrders } = require('../controllers/adminController');
+const {
+	getAllUsers,
+	getAllProducts,
+	approveProduct,
+	approveUser,
+	getFarmerApplications,
+	approveFarmerApplication,
+	deleteUser,
+	getAllOrders,
+} = require('../controllers/adminController');
 
 const router = express.Router();
 
@@ -14,6 +23,10 @@ router.patch('/products/:productId/approve', approveProduct);
 
 // Approve a user
 router.patch('/users/:userId/approve', approveUser);
+
+// Farmer applications
+router.get('/farmer-applications', getFarmerApplications);
+router.patch('/farmer-applications/:applicationId/approve', approveFarmerApplication);
 
 // Delete a user
 router.delete('/users/:userId', deleteUser);
