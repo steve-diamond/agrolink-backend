@@ -5,8 +5,8 @@ const FarmerApplicationSchema = new mongoose.Schema(
     applicationId: { type: String, index: true },
     status: {
       type: String,
-      enum: ['draft', 'submitted', 'queued'],
-      default: 'submitted',
+      enum: ['draft', 'pending', 'approved', 'rejected', 'queued'],
+      default: 'pending',
     },
     account: {
       name: { type: String, required: true, trim: true },

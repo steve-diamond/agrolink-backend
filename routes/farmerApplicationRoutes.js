@@ -16,6 +16,13 @@ const buildApplicationId = () => {
   return `AGR-${random}`;
 };
 
+const normalizeApplicationStatus = (rawStatus) => {
+  const status = String(rawStatus || '').trim().toLowerCase();
+  if (status === 'submitted') return 'pending';
+  if (['draft', 'pending', 'approved', 'rejected', 'queued'].includes(status)) return status;
+  return 'pending';
+};
+
 const buildSubmissionMeta = (applicationId, application) => {
   const hasId = Boolean(application?.idPhotoName || application?.idPhotoUrl);
   const preferredVerification = sanitizePreferredVerification(application) || 'email';
@@ -94,7 +101,7 @@ router.post('/', async (req, res) => {
     };
 
     const existing = await FarmerApplication.findOne({ 'account.email': email });
-    const nextStatus = ['draft', 'submitted', 'queued'].includes(status) ? status : 'submitted';
+    const nextStatus = normalizeApplicationStatus(status);
 
     if (existing) {
       existing.account = {
