@@ -160,11 +160,24 @@ const verifyPayment = asyncHandler(async (req, res) => {
           expectedAmount: orderAmount,
         });
       }
+      // Platform commission logic
+      const commission = toTwoDp(orderAmount * 0.1); // 10% commission
+      const farmerAmount = toTwoDp(orderAmount - commission);
+      order.commission = commission;
       order.paymentStatus = "paid";
       order.status = "paid";
       order.paymentReference = transactionReference;
       await order.save();
       transaction.orderId = order._id;
+
+      // Find farmer (from product)
+      const Product = require(path.join(__dirname, '../models/Product'));
+      const product = await Product.findById(order.products[0].productId);
+      if (!product) throw new ApiError(404, "Product not found for order");
+      const farmerId = product.farmer;
+      // Credit farmer's wallet
+      const { creditWallet } = require(path.join(__dirname, 'wallet.controller'));
+      await creditWallet(farmerId, farmerAmount, transactionReference, `Order #${order._id} earning`);
     }
   }
 

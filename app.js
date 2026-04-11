@@ -13,6 +13,7 @@ const {
 } = require('./middleware/observability.middleware');
 
 const apiRoutes = require('./routes');
+const withdrawalRoutes = require('./routes/withdrawal.routes');
 const adminRoutes = require('./routes/adminRoutes');
 const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/order.routes');
@@ -83,6 +84,9 @@ app.use('/api/farmer-applications', farmerApplicationRoutes);
 app.use('/api/buyer-applications', buyerApplicationRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/v1', apiRoutes);
+
+// Register withdrawal routes
+app.use('/api/withdrawals', withdrawalRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
