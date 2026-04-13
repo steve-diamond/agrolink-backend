@@ -1,6 +1,7 @@
 const express = require('express');
 
 
+
 const authRoutes = require('../routes/auth.routes');
 const productRoutes = require('../routes/productRoutes');
 const orderRoutes = require('../routes/order.routes');
@@ -14,6 +15,7 @@ const logisticsRoutes = require('../routes/logisticsRoutes');
 const warehouseRoutes = require('../routes/warehouseRoutes');
 const intelligenceRoutes = require('../routes/intelligence.routes');
 const advisoryRoutes = require('../routes/advisory.routes');
+const userRoutes = require('../routes/user.routes');
 // Delivery routes placeholder (to be implemented)
 
 const router = express.Router();
@@ -32,6 +34,7 @@ router.use('/logistics', logisticsRoutes);
 router.use('/warehouses', warehouseRoutes);
 router.use('/intelligence', intelligenceRoutes);
 router.use('/advisory', advisoryRoutes);
+router.use('/users', userRoutes);
 const deliveryRoutes = require('../routes/delivery.routes');
 router.use('/delivery', deliveryRoutes);
 

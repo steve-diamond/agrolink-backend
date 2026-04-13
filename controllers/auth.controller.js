@@ -67,6 +67,11 @@ const login = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid credentials.');
   }
 
+  // Prevent unapproved farmers from logging in
+  if (user.role === 'farmer' && user.approved === false) {
+    throw new ApiError(403, 'Your account is pending approval. Please wait for admin approval.');
+  }
+
   const token = getToken(user._id);
 
   res.status(200).json({
