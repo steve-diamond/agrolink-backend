@@ -57,6 +57,13 @@ const login = asyncHandler(async (req, res) => {
 		throw new ApiError(401, 'Invalid credentials.');
 	}
 	const token = getToken(user._id);
+	// Set secure cookie
+	res.cookie('token', token, {
+		httpOnly: true,
+		secure: process.env.NODE_ENV === 'production',
+		sameSite: 'strict',
+		maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+	});
 	res.status(200).json({
 		status: 'success',
 		data: {
@@ -81,5 +88,6 @@ module.exports = {
 	login,
 	getMe,
 };
+
 // Auth controller placeholder
 module.exports = {};

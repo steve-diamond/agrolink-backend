@@ -1,61 +1,49 @@
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema(
-	{
-		name: {
-			type: String,
-			required: [true, "Name is required."],
-			trim: true,
-			minlength: [2, "Name must have at least 2 characters."],
-		},
-		email: {
-			type: String,
-			required: [true, "Email is required."],
-			unique: true,
-			lowercase: true,
-			trim: true,
-			match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address."],
-		},
-		password: {
-			type: String,
-			required: [true, "Password is required."],
-			minlength: [8, "Password must be at least 8 characters long."],
-			select: false,
-		},
-		role: {
-			type: String,
-			enum: ["farmer", "buyer", "admin", "supplier", "logistics_provider", "cooperative_admin"],
-			default: "buyer",
-		},
-		approved: {
-			type: Boolean,
-			default: false,
-		},
-		resetPasswordToken: {
-			type: String,
-			select: false,
-		},
-		resetPasswordExpires: {
-			type: Date,
-			select: false,
-		},
-	},
-	{
-		timestamps: true,
-	}
-);
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const Schema = mongoose.Schema;
 
-userSchema.pre("save", async function () {
-	if (!this.isModified("password")) {
-		return;
-	}
+const UserSchema = new Schema({
+  name: { type: String, required: true },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Invalid email format']
+  },
+  phone: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    match: [/^\+?[0-9]{7,15}$/, 'Invalid phone number']
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6,
+    select: false
+  },
+  role: {
+    type: String,
+    enum: ["farmer","buyer","supplier","logistics","admin","agent"],
+    required: true
+  },
+  status: { type: String, default: 'active' }
+}, { timestamps: true });
 
-	this.password = await bcrypt.hash(this.password, 12);
+// Hash password before saving
+UserSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
 
-userSchema.methods.comparePassword = async function (candidatePassword) {
-	return bcrypt.compare(candidatePassword, this.password);
+// Instance method to compare password
+UserSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model('User', UserSchema);

@@ -1,4 +1,6 @@
 const express = require('express');
+
+const authMiddleware = require('../middleware/authMiddleware');
 const {
 	getAllUsers,
 	getAllProducts,
@@ -11,6 +13,10 @@ const {
 } = require('../controllers/adminController');
 
 const router = express.Router();
+
+
+// All admin routes require authentication
+router.use(authMiddleware);
 
 // Get all users
 router.get('/users', getAllUsers);
