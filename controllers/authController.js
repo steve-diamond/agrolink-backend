@@ -83,11 +83,12 @@ const getMe = asyncHandler(async (req, res) => {
 	});
 });
 
-module.exports = {
 	register,
 	login,
 	getMe,
-};
 
-// Auth controller placeholder
-module.exports = {};
+module.exports = {
+  register,
+  login,
+  getMe,
+};
