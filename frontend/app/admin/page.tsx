@@ -128,7 +128,7 @@ export default function AdminPage() {
       setBusyId(id + action);
       const token = getToken();
       let url = "";
-      let method = "PATCH";
+      const method = "PATCH";
       if (action === "approved") url = `/api/withdrawals/admin/${id}/approve`;
       else if (action === "rejected") url = `/api/withdrawals/admin/${id}`; // fallback, or add a reject endpoint
       else if (action === "paid") url = `/api/withdrawals/admin/${id}/mark-paid`;

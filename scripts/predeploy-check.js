@@ -28,7 +28,7 @@ const REQUIRED_ENV_VARS = [
   'SUBSCRIPTION_FEE',
 ];
 
-let missing = [];
+const missing = [];
 for (const key of REQUIRED_ENV_VARS) {
   if (!process.env[key]) missing.push(key);
 }
