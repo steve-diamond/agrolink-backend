@@ -1,4 +1,4 @@
-const Redis = require('ioredis');
+import Redis from 'ioredis';
 
 let client = null;
 
@@ -31,4 +31,4 @@ const getRedisClient = () => {
   return client;
 };
 
-module.exports = { getRedisClient };
+export { getRedisClient };

@@ -1,1 +1,1 @@
-module.exports = require("../../controllers/adminController");
+export { default } from "../../controllers/adminController";

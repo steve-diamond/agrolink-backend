@@ -1,3 +1,4 @@
 // Environment variable loader
-require('dotenv').config();
-module.exports = process.env;
+import dotenv from 'dotenv';
+dotenv.config();
+export default process.env;
