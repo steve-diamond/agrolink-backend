@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
         setProducts(productsRes.data);
         setOrders(ordersRes.data);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         setError(err?.response?.data?.message || "Failed to load admin dashboard.");
       })
       .finally(() => setLoading(false));
@@ -94,7 +94,7 @@ export default function AdminDashboardPage() {
       if (type === "users") setUsers((prev) => prev.filter((u) => u._id !== id));
       if (type === "products") setProducts((prev) => prev.filter((p) => p._id !== id));
       if (type === "orders") setOrders((prev) => prev.filter((o) => o._id !== id));
-    } catch (err: any) {
+    } catch (err: unknown) {
       alert(err?.response?.data?.message || `Failed to delete ${type.slice(0, -1)}.`);
     } finally {
       setDeleting(null);
@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
       setUsers((prev) =>
         prev.map((user) => (user._id === id ? { ...user, approved: true } : user))
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       alert(err?.response?.data?.message || "Failed to approve farmer.");
     }
   };

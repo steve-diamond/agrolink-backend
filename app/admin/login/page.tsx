@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(user));
       router.push("/admin");
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err?.response?.data?.message || "Admin login failed");
     } finally {
       setIsSubmitting(false);
