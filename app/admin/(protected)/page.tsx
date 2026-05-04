@@ -131,8 +131,12 @@ export default function AdminDashboardPage() {
   const totalProducts = products.length;
   const totalOrders = filteredOrders.length;
 
+  type Order = { totalPrice: number; status?: string; createdAt?: string; productId?: { name?: string }; buyerId?: { email?: string } };
+  type User = { _id: string; email: string; role: string; approved?: boolean };
+  type Product = { _id: string; name: string; price: number };
+
   const totalRevenue = filteredOrders.reduce(
-    (sum: number, order: any) => sum + order.totalPrice,
+    (sum: number, order: Order) => sum + order.totalPrice,
     0
   );
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
@@ -586,7 +590,7 @@ export default function AdminDashboardPage() {
 
       <section>
         <h2>Users</h2>
-        {users.map((u: any) => (
+        {(users as User[]).map((u) => (
           <div key={u._id}>
             {u.email} - {u.role}
             {u.role === "farmer" ? ` - ${u.approved ? "Approved" : "Pending"}` : ""}
@@ -602,7 +606,7 @@ export default function AdminDashboardPage() {
 
       <section>
         <h2>Products</h2>
-        {products.map((p: any) => (
+        {(products as Product[]).map((p) => (
           <div key={p._id}>
             {p.name} - ₦{p.price}
             <button onClick={() => deleteProduct(p._id)}>Delete</button>
@@ -614,7 +618,7 @@ export default function AdminDashboardPage() {
 
       <section>
         <h2>Orders</h2>
-        {orders.map((o: any) => (
+        {(orders as Order[]).map((o) => (
           <div key={o._id}>
             {o.productId?.name} - {o.buyerId?.email} - ₦{o.totalPrice}
           </div>

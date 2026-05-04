@@ -10,11 +10,11 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setIsSubmitting(true);
@@ -27,8 +27,12 @@ export default function Login() {
 
       alert("Login successful");
       router.push("/dashboard");
-    } catch (error: any) {
-      const message = error?.response?.data?.message || "Login failed";
+    } catch (error: unknown) {
+      let message = "Login failed";
+      if (typeof error === "object" && error !== null && "response" in error) {
+        // @ts-expect-error
+        message = error.response?.data?.message || message;
+      }
       setError(message);
       alert(message);
     } finally {
