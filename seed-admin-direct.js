@@ -1,4 +1,6 @@
 require('dotenv').config();
+// Fix for XAMPP/Windows c-ares DNS issue — use Google DNS for SRV resolution
+require('dns').setServers(['8.8.8.8', '8.8.4.4']);
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
