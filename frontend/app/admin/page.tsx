@@ -719,7 +719,7 @@ export default function AdminPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" fontSize={12} />
                     <YAxis fontSize={12} />
-                    <Tooltip formatter={fmtCurrency} />
+                    <Tooltip formatter={(value) => fmtCurrency(Number(value ?? 0))} />
                     <Line type="monotone" dataKey="amount" stroke="#f59e42" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>

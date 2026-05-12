@@ -20,7 +20,8 @@ export default function AdminLoginPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await API.post("/api/auth/login", form);
+      type LoginResponse = { data: { token: string; user: { role?: string; [key: string]: unknown } } };
+      const res = await API.post("/api/auth/login", form) as LoginResponse;
       const user = res.data.user;
 
       if (user?.role !== "admin") {
@@ -34,7 +35,11 @@ export default function AdminLoginPage() {
       localStorage.setItem("user", JSON.stringify(user));
       router.push("/admin");
     } catch (err: unknown) {
-      setError(err?.response?.data?.message || "Admin login failed");
+      const errMsg =
+        (err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : null) ?? "Admin login failed";
+      setError(errMsg);
     } finally {
       setIsSubmitting(false);
     }

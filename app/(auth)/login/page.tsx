@@ -20,7 +20,8 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const res = await API.post("/api/auth/login", form);
+      type LoginResponse = { data: { token: string; user: Record<string, unknown> } };
+      const res = await API.post("/api/auth/login", form) as LoginResponse;
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));

@@ -33,9 +33,15 @@ export default function OrdersPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    API.get<Order[]>("/api/orders")
+    API.get<{ data: Order[] }>("/api/orders")
       .then((res) => setOrders(res.data))
-      .catch((err) => setError(err?.response?.data?.message || "Failed to load orders."))
+      .catch((err: unknown) => {
+        const msg =
+          (err && typeof err === "object" && "response" in err
+            ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+            : null) ?? "Failed to load orders.";
+        setError(msg);
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -32,9 +32,6 @@ export default function Dashboard() {
           quantity: Number(form.quantity),
           location: form.location,
           farmer: user.name,
-        },
-        {
-          headers: { Authorization: token },
         }
       );
 

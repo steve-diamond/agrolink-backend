@@ -44,7 +44,7 @@ export default function WalletPage() {
         });
         if (!res.ok) return;
         const data = await res.json();
-        const total = (data.data || []).reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        const total = (data.data as { amount?: number }[] || []).reduce((sum: number, tx) => sum + (tx.amount || 0), 0);
         setEarnings(total);
       } catch {}
     };

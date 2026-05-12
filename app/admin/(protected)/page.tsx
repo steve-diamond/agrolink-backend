@@ -71,9 +71,9 @@ export default function AdminDashboardPage() {
     }
 
     Promise.all([
-      API.get("/api/admin/users", { headers: { Authorization: token } }),
-      API.get("/api/admin/products", { headers: { Authorization: token } }),
-      API.get("/api/admin/orders", { headers: { Authorization: token } }),
+      API.get<{ data: AdminUser[] }>("/api/admin/users"),
+      API.get<{ data: AdminProduct[] }>("/api/admin/products"),
+      API.get<{ data: AdminOrder[] }>("/api/admin/orders"),
     ])
       .then(([usersRes, productsRes, ordersRes]) => {
         setUsers(usersRes.data);
@@ -81,7 +81,11 @@ export default function AdminDashboardPage() {
         setOrders(ordersRes.data);
       })
       .catch((err: unknown) => {
-        setError(err?.response?.data?.message || "Failed to load admin dashboard.");
+        const msg =
+          (err && typeof err === "object" && "response" in err
+            ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+            : null) ?? "Failed to load admin dashboard.";
+        setError(msg);
       })
       .finally(() => setLoading(false));
   }, [router]);
@@ -90,12 +94,16 @@ export default function AdminDashboardPage() {
     if (!confirm(`Delete this ${type.slice(0, -1)}? This cannot be undone.`)) return;
     setDeleting(id);
     try {
-      await API.delete(`/api/admin/${type}/${id}`, { headers: { Authorization: getToken() } });
+      await API.delete(`/api/admin/${type}/${id}`);
       if (type === "users") setUsers((prev) => prev.filter((u) => u._id !== id));
       if (type === "products") setProducts((prev) => prev.filter((p) => p._id !== id));
       if (type === "orders") setOrders((prev) => prev.filter((o) => o._id !== id));
     } catch (err: unknown) {
-      alert(err?.response?.data?.message || `Failed to delete ${type.slice(0, -1)}.`);
+      const msg =
+        (err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : null) ?? `Failed to delete ${type.slice(0, -1)}.`;
+      alert(msg);
     } finally {
       setDeleting(null);
     }
@@ -106,14 +114,16 @@ export default function AdminDashboardPage() {
 
   const approveFarmer = async (id: string) => {
     try {
-      await API.patch(`/api/admin/users/${id}/approve`, null, {
-        headers: { Authorization: getToken() },
-      });
+      await API.patch(`/api/admin/users/${id}/approve`, null);
       setUsers((prev) =>
         prev.map((user) => (user._id === id ? { ...user, approved: true } : user))
       );
     } catch (err: unknown) {
-      alert(err?.response?.data?.message || "Failed to approve farmer.");
+      const msg =
+        (err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : null) ?? "Failed to approve farmer.";
+      alert(msg);
     }
   };
 
@@ -618,7 +628,7 @@ export default function AdminDashboardPage() {
 
       <section>
         <h2>Orders</h2>
-        {(orders as Order[]).map((o) => (
+        {orders.map((o) => (
           <div key={o._id}>
             {o.productId?.name} - {o.buyerId?.email} - ₦{o.totalPrice}
           </div>

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 
 export default function FarmerSubscriptionStatus() {
-  const [status, setStatus] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
