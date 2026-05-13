@@ -1,6 +1,6 @@
-import express from 'express';
-import walletController from '../controllers/walletController';
-import { protect } from '../middleware/auth.middleware';
+const express = require('express');
+const walletController = require('../controllers/walletController');
+const { protect } = require('../middleware/auth.middleware');
 const router = express.Router();
 router.get('/deposit-history', protect, walletController.getDepositHistory);
 router.get('/transactions', protect, walletController.getWalletTransactions);
@@ -13,4 +13,4 @@ router.post('/withdraw', protect, walletController.requestWithdrawal);
 router.post('/credit', protect, walletController.creditWallet);
 router.post('/lock/:id', protect, walletController.lockWallet);
 router.post('/unlock/:id', protect, walletController.unlockWallet);
-export default router;
+module.exports = router;
