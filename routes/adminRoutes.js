@@ -1,6 +1,6 @@
 const express = require('express');
 
-const authMiddleware = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middleware/auth.middleware');
 const {
 	getAllUsers,
 	getAllProducts,
@@ -8,15 +8,16 @@ const {
 	approveUser,
 	getFarmerApplications,
 	approveFarmerApplication,
+	getBuyerApplications,
+	approveBuyerApplication,
 	deleteUser,
 	getAllOrders,
 } = require('../controllers/adminController');
 
 const router = express.Router();
 
-
-// All admin routes require authentication
-router.use(authMiddleware);
+// All admin routes require authentication and admin role
+router.use(protect, authorize('admin'));
 
 // Get all users
 router.get('/users', getAllUsers);
@@ -33,6 +34,10 @@ router.patch('/users/:userId/approve', approveUser);
 // Farmer applications
 router.get('/farmer-applications', getFarmerApplications);
 router.patch('/farmer-applications/:applicationId/approve', approveFarmerApplication);
+
+// Buyer applications
+router.get('/buyer-applications', getBuyerApplications);
+router.patch('/buyer-applications/:applicationId/approve', approveBuyerApplication);
 
 // Delete a user
 router.delete('/users/:userId', deleteUser);

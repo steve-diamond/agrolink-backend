@@ -2,6 +2,7 @@ const User = require("../models/User");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const FarmerApplication = require("../models/FarmerApplication");
+const BuyerApplication = require("../models/BuyerApplication");
 
 const serializeOrder = (order) => {
 	const rawOrder = typeof order.toObject === "function" ? order.toObject() : order;
@@ -117,8 +118,53 @@ const approveFarmerApplication = async (req, res) => {
 	}
 };
 
-const deleteUser = async (req, res) => {
+const getBuyerApplications = async (_req, res) => {
 	try {
+		const applications = await BuyerApplication.find().sort({ createdAt: -1 });
+		return res.status(200).json({ applications });
+	} catch (error) {
+		return res.status(500).json({ message: "Failed to fetch buyer applications", error: error.message });
+	}
+};
+
+const approveBuyerApplication = async (req, res) => {
+	try {
+		const { applicationId } = req.params;
+		const application = await BuyerApplication.findOne({ applicationId });
+
+		if (!application) {
+			return res.status(404).json({ message: "Buyer application not found" });
+		}
+
+		application.status = "approved";
+		await application.save();
+
+		const email = String(application?.account?.email || "").trim().toLowerCase();
+		let approvedUser = null;
+
+		if (email) {
+			const user = await User.findOne({ email });
+			if (user) {
+				user.role = "buyer";
+				user.approved = true;
+				await user.save();
+				approvedUser = user;
+			}
+		}
+
+		return res.status(200).json({
+			message: approvedUser
+				? "Buyer application approved and linked user activated."
+				: "Buyer application approved. No matching user account found to activate.",
+			application,
+			user: approvedUser,
+		});
+	} catch (error) {
+		return res.status(500).json({ message: "Failed to approve buyer application", error: error.message });
+	}
+};
+
+const deleteUser = async (req, res) => {	try {
 		const { userId } = req.params;
 
 		const user = await User.findByIdAndDelete(userId);
@@ -152,6 +198,8 @@ module.exports = {
 	approveUser,
 	getFarmerApplications,
 	approveFarmerApplication,
+	getBuyerApplications,
+	approveBuyerApplication,
 	deleteUser,
 	getAllOrders,
 };
