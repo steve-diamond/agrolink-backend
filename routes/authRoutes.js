@@ -12,8 +12,7 @@ router.post("/login", rateLimit, captcha, authController.login);
 // Protected route to get current user
 router.get("/me", authMiddleware, authController.getMe);
 
-// Placeholder for password reset (to be implemented)
-// router.post('/forgot-password', authController.forgotPassword);
-// router.post('/reset-password', authController.resetPassword);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/reset-password", authController.resetPassword);
 
 module.exports = router;

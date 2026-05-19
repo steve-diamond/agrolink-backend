@@ -31,7 +31,9 @@ const UserSchema = new Schema({
     enum: ["farmer","buyer","supplier","logistics","admin","agent"],
     required: true
   },
-  status: { type: String, default: 'active' }
+  status: { type: String, default: 'active' },
+  resetToken: { type: String, default: null, select: false },
+  resetTokenExpiry: { type: Date, default: null, select: false },
 }, { timestamps: true });
 
 // Hash password before saving

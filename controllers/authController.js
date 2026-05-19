@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const path = require('path');
 const asyncHandler = require(path.join(__dirname, '..', 'utils', 'asyncHandler'));
@@ -87,8 +88,61 @@ const getMe = asyncHandler(async (req, res) => {
 	login,
 	getMe,
 
+const forgotPassword = asyncHandler(async (req, res) => {
+	const { email } = req.body;
+	if (!email) throw new ApiError(400, 'Email is required.');
+
+	const user = await User.findOne({ email: String(email).toLowerCase().trim() })
+		.select('+resetToken +resetTokenExpiry');
+
+	// Always return success to prevent user enumeration
+	if (!user) {
+		return res.status(200).json({
+			status: 'success',
+			message: 'If that account exists, a reset token has been generated.',
+		});
+	}
+
+	const resetToken = crypto.randomBytes(32).toString('hex');
+	user.resetToken = resetToken;
+	user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+	await user.save();
+
+	res.status(200).json({
+		status: 'success',
+		message: 'Password reset token generated.',
+		resetToken,
+	});
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+	const { token, password } = req.body;
+	if (!token) throw new ApiError(400, 'Reset token is required.');
+	if (!password || password.length < 8)
+		throw new ApiError(400, 'Password must be at least 8 characters long.');
+
+	const user = await User.findOne({ resetToken: token })
+		.select('+resetToken +resetTokenExpiry +password');
+
+	if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+		throw new ApiError(400, 'Reset token is invalid or has expired.');
+	}
+
+	user.password = password;
+	user.resetToken = null;
+	user.resetTokenExpiry = null;
+	await user.save();
+
+	res.status(200).json({
+		status: 'success',
+		message: 'Password has been reset successfully.',
+	});
+});
+
 module.exports = {
-  register,
-  login,
-  getMe,
+	register,
+	login,
+	getMe,
+	forgotPassword,
+	resetPassword,
 };
