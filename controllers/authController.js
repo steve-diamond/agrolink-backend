@@ -84,10 +84,6 @@ const getMe = asyncHandler(async (req, res) => {
 	});
 });
 
-	register,
-	login,
-	getMe,
-
 const forgotPassword = asyncHandler(async (req, res) => {
 	const { email } = req.body;
 	if (!email) throw new ApiError(400, 'Email is required.');
