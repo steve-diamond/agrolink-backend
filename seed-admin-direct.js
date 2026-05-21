@@ -1,5 +1,5 @@
 require('dotenv').config();
-// Fix for XAMPP/Windows c-ares DNS issue — use Google DNS for SRV resolution
+// Fix for XAMPP/Windows c-ares DNS issue â€” use Google DNS for SRV resolution
 require('dns').setServers(['8.8.8.8', '8.8.4.4']);
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -9,27 +9,26 @@ const ADMIN_EMAIL = 'admin@agrolink.com';
 const ADMIN_PASSWORD = 'agro123456';
 const ADMIN_NAME = 'Admin';
 
-console.log('🔍 Connecting to:', MONGODB_URI?.replace(/:[^:]*@/, ':***@'));
+console.log('ðŸ” Connecting to:', MONGODB_URI?.replace(/:[^:]*@/, ':***@'));
 
 mongoose.connect(MONGODB_URI, {
   serverSelectionTimeoutMS: 15000,
   socketTimeoutMS: 15000,
 })
 .then(async () => {
-  console.log('✅ Connected to MongoDB');
+  console.log('âœ… Connected to MongoDB');
 
   const UserSchema = new mongoose.Schema({
     name: String,
     email: { type: String, unique: true, lowercase: true },
     password: { type: String, select: false },
-    role: { type: String, enum: ['farmer', 'buyer', 'admin'], default: 'buyer' },
+    role: { type: String, enum: ['farmer', 'buyer', 'cooperative', 'logistics', 'warehouse', 'investor', 'admin', 'supplier', 'agent'], default: 'buyer' },
     approved: { type: Boolean, default: false },
   }, { timestamps: true });
 
-  UserSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
+  UserSchema.pre('save', async function () {
+    if (!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 12);
-    next();
   });
 
   const User = mongoose.model('User', UserSchema);
@@ -45,20 +44,20 @@ mongoose.connect(MONGODB_URI, {
       approved: true,
     });
     await user.save();
-    console.log(`✅ Created admin user: ${ADMIN_EMAIL}`);
+    console.log(`âœ… Created admin user: ${ADMIN_EMAIL}`);
   } else {
     user.password = ADMIN_PASSWORD;
     user.role = 'admin';
     user.approved = true;
     await user.save();
-    console.log(`✅ Updated admin user: ${ADMIN_EMAIL}`);
+    console.log(`âœ… Updated admin user: ${ADMIN_EMAIL}`);
   }
 
   await mongoose.connection.close();
-  console.log('✅ Done!');
+  console.log('âœ… Done!');
   process.exit(0);
 })
 .catch((err) => {
-  console.error('❌ Error:', err.message);
+  console.error('âŒ Error:', err.message);
   process.exit(1);
 });
