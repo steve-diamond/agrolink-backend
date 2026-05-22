@@ -17,8 +17,8 @@ const ensureAdminUser = async () => {
       name,
       email,
       password,
+      phone: process.env.ADMIN_PHONE || '0000000000',
       role: 'admin',
-      approved: true,
     });
     await user.save();
     console.log(`Bootstrapped admin user: ${email}`);

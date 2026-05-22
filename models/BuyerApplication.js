@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const BuyerApplicationSchema = new mongoose.Schema(
   {
-    applicationId: { type: String, index: true },
+    applicationId: { type: String },
     status: {
       type: String,
       enum: ['draft', 'pending', 'approved', 'rejected', 'activation_completed', 'queued'],
@@ -10,7 +10,7 @@ const BuyerApplicationSchema = new mongoose.Schema(
     },
     account: {
       name: { type: String, required: true, trim: true },
-      email: { type: String, required: true, trim: true, lowercase: true, index: true },
+      email: { type: String, required: true, trim: true, lowercase: true },
       phone: { type: String, required: true, trim: true },
     },
     application: { type: mongoose.Schema.Types.Mixed, required: true },
