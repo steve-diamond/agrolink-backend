@@ -4,7 +4,11 @@ const Subscription = require('../models/Subscription');
 const SubscriptionHistory = require('../models/SubscriptionHistory');
 const User = require('../models/User');
 
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost/agrolink';
+const MONGO_URI = process.env.MONGODB_URI;
+
+if (!MONGO_URI) {
+  throw new Error('MONGODB_URI is required to run expire-subscriptions.js');
+}
 
 async function expireSubscriptions() {
   await mongoose.connect(MONGO_URI);
@@ -22,7 +26,7 @@ async function expireSubscriptions() {
       amount: 2000, // Should match fee
       status: 'expired',
     });
-    // TODO: Optionally notify user here
+    // Notification delivery is handled by downstream engagement workers.
   }
   await mongoose.disconnect();
   console.log(`Expired ${expiring.length} subscriptions.`);

@@ -29,7 +29,7 @@ const otpSendByPhone = new Map();
 const otpSendByIp = new Map();
 const otpVerifyFailures = new Map();
 const uploadRoot = path.join(__dirname, '..', 'uploads');
-const otpSecret = process.env.OTP_SECRET || process.env.JWT_SECRET || 'agrolink-otp-dev-secret';
+const otpSecret = process.env.OTP_SECRET || process.env.JWT_SECRET;
 
 const OTP_SEND_WINDOW_MS = 10 * 60 * 1000;
 const OTP_SEND_MAX_PER_PHONE = 5;
@@ -141,6 +141,10 @@ const inferExtension = (mimeType = '', fileName = '') => {
 };
 
 router.post('/otp/send', (req, res) => {
+  if (!otpSecret) {
+    return res.status(500).json({ message: 'OTP service is not configured.' });
+  }
+
   const phone = normalizePhone(req.body?.phone || '');
   const ip = getClientIp(req);
 
@@ -195,6 +199,10 @@ router.post('/otp/send', (req, res) => {
 });
 
 router.post('/otp/verify', (req, res) => {
+  if (!otpSecret) {
+    return res.status(500).json({ message: 'OTP service is not configured.' });
+  }
+
   const phone = normalizePhone(req.body?.phone || '');
   const otp = String(req.body?.otp || '').trim();
   const otpRef = String(req.body?.otpRef || '').trim();
